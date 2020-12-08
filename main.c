@@ -40,7 +40,7 @@ int main(void){
             case 1: buz_cond = 1; break;
             case 2: buz_cond = alarm != 0; break;
             case 3: buz_cond = !tim_buzz; break;
-            case 4: buz_cond = !(!tim_buzz && i_buzz); break;
+            case 4: buz_cond = tim_buzz || !i_buzz; break;
             case 5: buz_cond = !tim_buzz && !i_buzz; break;
         }
         if(buz_cond){
@@ -69,4 +69,4 @@ int main(void){
 
 ISR(TIMER1_COMPA_vect){
     cycle = 1;
-}
+    }
