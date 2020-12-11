@@ -1,10 +1,31 @@
 #include "timers.h"
 #include <avr/interrupt.h>
 #include <avr/eeprom.h>
+#include "controls.h"
+#include <util/delay.h>
+
 //fcpu = 16MHz
 
 #define T1_BUZZ 50
 #define T2_BUZZ 25
+#define T1_CONTROLS 5
+#define T2_CONTROLS 10
+
+#define ALARM_MASK 0x01
+
+const uint8_t EEMEM PS_controls[] = {
+    0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x00, 0x02,
+    0x00, 0x00, 0x00, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+};
+
+const uint8_t EEMEM PW_controls[] = {
+    2, 3, 1, 3, 4, 5, 3, 1, 3, 4, 5, 0, 1, 6, 4, 5, 6, 1, 6, 4, 5, 0, 7, 0
+};
+
+const uint8_t EEMEM PA_controls[] = {
+    12, 0, 0, 0, 22, 3, 0, 0, 0, 22, 8, 5, 0, 0, 22, 13, 0, 0, 0, 22, 18, 15, 22, 0
+};
+
 const uint8_t EEMEM PS_buzz[] = {
     0x00, 0xC4, 0xC0, 0x80, 0x80, 0x40, 0x00, 0x00, 0xC0, 0x80, 0x80, 0x11, 0x00, 0x00,
     0x00, 0xA2, 0xA0, 0x80, 0x80, 0x20, 0x00, 0x00, 0xA0, 0x80, 0x80, 0x20, 0x00, 0x00,
@@ -24,21 +45,69 @@ const uint8_t EEMEM PA_buzz[] = {
 
 volatile char cycle = 0;
 
-
 int main(void){
+    /*-------- buzzer vars start --------------*/
     uint8_t pc_buzz = 0, i_buzz = 0;
     uint16_t tim_buzz = 0;
-    char alarm = 1, buz_out, buz_cond;
+    char buz_out, buz_cond;
+    /*-------- buzzer vars end ----------------*/
+    /*--------------control vars start-------------*/
+
+    char x = 0;
+    uint8_t S1, S2, pc_controls = 0; 
+    char control_out, control_cond;
+    uint16_t tim_controls = 0;
+    /*--------------control vars end---------------*/
+
+    uint8_t flags = 0x00;
     init_cycle_counter();//init timer
+    controls_init(&PORTA, 1, &PORTA, 0); //init controls
+    reg_pins(&PINA, &PINA); //register pins for controls
+
     sei();//enable interrupts
     DDRC  = 0x01; //buzzer out
+    DDRD = 0xff;
 
     while(1){
+        update_controls(); //update controls status
+        S1 = incK;
+        S2 = decK;
+        if(x >= 16) x = 0;
+        else if(x < 0) x = 15;
+        PORTD = ~pc_controls;
+        _delay_ms(500);
+        /*-------------------controls graph start--------------------------*/
+        control_out = eeprom_read_byte(&PS_controls[pc_controls]); //get output setup            
+        switch(eeprom_read_byte(&PW_controls[pc_controls])){ //check condition
+            case 0: control_cond = 0; break;
+            case 1: control_cond = 1; break;
+            case 2: control_cond = !S2; break;
+            case 3: control_cond = S1; break;
+            case 4: control_cond = !S1 || !S2; break;
+            case 5: control_cond = !tim_controls; break;
+            case 6: control_cond = S2; break;
+            case 7: control_cond = !S1 && !S2; break;
+        }
+        if(control_cond){
+            ++pc_controls;
+        }
+        else{
+            pc_controls = eeprom_read_byte(&PA_controls[pc_controls]);
+        }
+        if(control_out & 0x08) { ++x; }
+        if(control_out & 0x04) { --x; }
+        if(control_out & 0x02) { tim_controls = T1_CONTROLS; }
+        if(control_out & 0x01) { tim_controls = T2_CONTROLS; }
+        /*---------------------controls graph end-------------------------*/
+
+
+
+        /*-------------------buzzer graph start--------------------------*/
         buz_out = eeprom_read_byte(&PS_buzz[pc_buzz]); //get output setup            
         switch(eeprom_read_byte(&PW_buzz[pc_buzz])){ //check condition
             case 0: buz_cond = 0; break;
             case 1: buz_cond = 1; break;
-            case 2: buz_cond = alarm != 0; break;
+            case 2: buz_cond = flags & ALARM_MASK; break;
             case 3: buz_cond = !tim_buzz; break;
             case 4: buz_cond = tim_buzz || !i_buzz; break;
             case 5: buz_cond = !tim_buzz && !i_buzz; break;
@@ -59,14 +128,16 @@ int main(void){
         if(buz_out & 0x04) { i_buzz = 10; }
         if(buz_out & 0x02) { i_buzz = 5; }
         if(buz_out & 0x01) { --i_buzz; }
+        /*---------------------buzzer graph end-------------------------*/
         while(!cycle){
             continue;
         }
         cycle = 0;
         if(tim_buzz) --tim_buzz;
+        if(tim_controls) --tim_controls;
     }
 }
 
 ISR(TIMER1_COMPA_vect){
     cycle = 1;
-    }
+}
