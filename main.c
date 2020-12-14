@@ -41,6 +41,15 @@ const uint8_t EEMEM PA_buzz[] = {
     0, 20, 0, 0, 23, 0, 0, 26, 0, 0, 29, 0, 0, 16, 32, 0, 0, 36, 0, 0,
     39, 35
 };
+const uint8_t EEMEM PS_mux[] = {
+    0, 1, 2, 3, 4, 5, 6
+};
+const uint8_t EEMEM PW_mux[] = {
+    1, 1, 1, 1, 1, 1, 0
+};
+const uint8_t EEMEM PA_mux[] = {
+    0, 0, 0, 0, 0, 0, 0
+};
 //cycle duration 1/400s
 
 volatile char cycle = 0;
@@ -48,6 +57,7 @@ volatile char cycle = 0;
 int main(void){
     /*multiplexer vars start------------------*/
     uint8_t mux_state = 1, i = 0, enable = 0;
+    uint8_t pc_mux = 0, mux_out, mux_cond;
     /*multiplexer vars end---------------------*/
 
     /*-------- buzzer vars start --------------*/
@@ -80,68 +90,25 @@ int main(void){
         else if(x < 0) x = 15;
         PORTD = ~x; //for testing causes
 
-        /*disp*/
-        switch(mux_state){
-            case 1: PORTA |= (1 << PA5); //disable mux
-            PORTA &= ~(7 << 2); //zero out mux inputs
-            i = 0; 
-            PORTA |= (i << 2);
-            PORTA &= ~(1 << PA5); //enable mux
-            mux_state = 2;
-            break;
-
-            case 2: PORTA |= (1 << PA5); //disable mux
-            PORTA &= ~(7 << 2); //zero out mux inputs
-            i = 1; 
-            PORTA |= (i << 2);
-            PORTA &= ~(1 << PA5); //enable mux
-            mux_state = 3;
-            break;
-
-            case 3: PORTA |= (1 << PA5); //disable mux
-            PORTA &= ~(7 << 2); //zero out mux inputs
-            i = 2; 
-            PORTA |= (i << 2);
-            PORTA &= ~(1 << PA5); //enable mux
-            mux_state = 4;
-            break;
-            
-            case 4: PORTA |= (1 << PA5); //disable mux
-            PORTA &= ~(7 << 2); //zero out mux inputs
-            i = 3; 
-            PORTA |= (i << 2);
-            PORTA &= ~(1 << PA5); //enable mux
-            mux_state = 5;
-            break;
-
-            case 5: PORTA |= (1 << PA5); //disable mux
-            PORTA &= ~(7 << 2); //zero out mux inputs
-            i = 4; 
-            PORTA |= (i << 2);
-            PORTA &= ~(1 << PA5); //enable mux
-            mux_state = 6;
-            break;
-            
-            case 6: PORTA |= (1 << PA5); //disable mux
-            PORTA &= ~(7 << 2); //zero out mux inputs
-            i = 5; 
-            PORTA |= (i << 2);
-            PORTA &= ~(1 << PA5); //enable mux
-            mux_state = 7;
-            break;
-
-            case 7: PORTA |= (1 << PA5); //disable mux
-            PORTA &= ~(7 << 2); //zero out mux inputs
-            i = 6; 
-            PORTA |= (i << 2);
-            PORTA &= ~(1 << PA5); //enable mux
-            mux_state = 1;
-            break;
+        /*------------------------disp graph start-------------------------*/
+        mux_out = eeprom_read_byte(&PS_mux[pc_mux]);
+        switch(eeprom_read_byte(&PW_mux[pc_mux])){
+            case 0: mux_cond = 0; break;
+            case 1: mux_cond = 1; break;
         }
-        /*disp*/
-
-
-
+        if(mux_cond){
+            ++pc_mux;
+        }
+        else{
+            pc_mux = eeprom_read_byte(&PA_mux[pc_mux]);
+        }
+        PORTA |= (1 << PA5); //disable mux
+        PORTA &= ~(7 << 2); //zero out mux inputs
+        i = mux_out;
+        //send bytes to registers here
+        PORTA |= (i << 2);
+        PORTA &= ~(1 << PA5); //enable mux
+        /*------------------------disp graph end---------------------------*/
 
         /*-------------------controls graph start--------------------------*/
         control_out = eeprom_read_byte(&PS_controls[pc_controls]); //get output setup            
