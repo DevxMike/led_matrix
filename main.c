@@ -6,10 +6,10 @@
 
 //fcpu = 16MHz
 
-#define T1_BUZZ 100
-#define T2_BUZZ 50
-#define T1_CONTROLS 60
-#define T2_CONTROLS 200
+#define T1_BUZZ 140
+#define T2_BUZZ 90
+#define T1_CONTROLS 100
+#define T2_CONTROLS 255
 #define ALARM_MASK 0x01
 
 const uint8_t EEMEM PS_controls[] = {
@@ -53,6 +53,7 @@ const uint8_t EEMEM PA_mux[] = {
 //cycle duration 1/400s
 
 volatile char cycle = 0;
+volatile uint8_t pwm = 255, count = 0;
 
 int main(void){
     /*multiplexer vars start------------------*/
@@ -80,15 +81,15 @@ int main(void){
 
     sei();//enable interrupts
     DDRC  = 0x01; //buzzer out
-    DDRD = 0xff;
-    DDRA = 0x3F & ~0x03; //set mux outs, dont interrupt S1 and S2
+    DDRB = 0xff;
+    DDRA = 0x7F & ~0x03; //set mux outs, dont interrupt S1 and S2
     while(1){
         update_controls(); //update controls status
         S1 = incK; //store new S1 control status
         S2 = decK; //same as above
         if(x >= 16) x = 0; 
         else if(x < 0) x = 15;
-        PORTD = ~x; //for testing causes
+        PORTB = ~x; //for testing causes
 
         /*------------------------disp graph start-------------------------*/
         mux_out = eeprom_read_byte(&PS_mux[pc_mux]);
@@ -108,6 +109,9 @@ int main(void){
         //send bytes to registers here
         PORTA |= (i << 2);
         PORTA &= ~(1 << PA5); //enable mux
+        pwm = 255 - i*42;
+        count = 0;
+        turn_pwm_on();
         /*------------------------disp graph end---------------------------*/
 
         /*-------------------controls graph start--------------------------*/
@@ -169,9 +173,13 @@ int main(void){
         cycle = 0;
         if(tim_buzz) --tim_buzz; //decrease buzzer timer if > 0 
         if(tim_controls) --tim_controls; //decrease controls timer if > 0
+        turn_pwm_off();
     }
 }
 
-ISR(TIMER1_COMPA_vect){
+ISR(TIMER0_COMP_vect){
     cycle = 1;
+}
+ISR(TIMER2_COMP_vect){
+    if(++count <= pwm) PORTA |= (1 << PA6); else PORTA &= ~(1 << PA6);
 }
