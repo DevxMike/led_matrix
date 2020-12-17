@@ -181,5 +181,8 @@ ISR(TIMER0_COMP_vect){
     cycle = 1;
 }
 ISR(TIMER2_COMP_vect){
-    if(++count <= pwm) PORTA |= (1 << PA6); else PORTA &= ~(1 << PA6);
+    if(++count <= pwm) { 
+        if(!(PORTA & (1 << PA6)))PORTA |= (1 << PA6);
+    }
+    else PORTA &= ~(1 << PA6);
 }
