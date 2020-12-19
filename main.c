@@ -3,6 +3,7 @@
 #include <avr/eeprom.h>
 #include "controls.h"
 #include <util/delay.h>
+#include "spi.h"
 
 //fcpu = 16MHz
 
@@ -56,9 +57,16 @@ volatile char cycle = 0;
 volatile uint8_t pwm = 255, count = 0;
 
 int main(void){
+    /*----------display data start------------*/
+    reg_data_t data;
+    data.first = 0xff;
+    data.second = data.third = 0xff;
+    /*----------display data end--------------*/
+
+
     /*multiplexer vars start------------------*/
     uint8_t mux_state = 1, i = 0, enable = 0;
-    uint8_t pc_mux = 0, mux_out, mux_cond;
+    uint8_t pc_mux = 0, mux_out, mux_cond, i_mux = 3;
     /*multiplexer vars end---------------------*/
 
     /*-------- buzzer vars start --------------*/
@@ -78,18 +86,20 @@ int main(void){
     init_cycle_counter();//init timer
     controls_init(&PORTA, 1, &PORTA, 0); //init controls
     reg_pins(&PINA, &PINA); //register pins for controls
-
+    init_spi();
+    send_set(&data);
     sei();//enable interrupts
     DDRC  = 0x01; //buzzer out
-    DDRB = 0xff;
+    DDRD = 0xff;
     DDRA = 0x7F & ~0x03; //set mux outs, dont interrupt S1 and S2
     while(1){
+        turn_pwm_off();
         update_controls(); //update controls status
         S1 = incK; //store new S1 control status
         S2 = decK; //same as above
         if(x >= 16) x = 0; 
         else if(x < 0) x = 15;
-        PORTB = ~x; //for testing causes
+        PORTD = ~x; //for testing causes
 
         /*------------------------disp graph start-------------------------*/
         mux_out = eeprom_read_byte(&PS_mux[pc_mux]);
@@ -109,7 +119,7 @@ int main(void){
         //send bytes to registers here
         PORTA |= (i << 2);
         PORTA &= ~(1 << PA5); //enable mux
-        pwm = 255 - i*42;
+        pwm = 255;
         count = 0;
         turn_pwm_on();
         /*------------------------disp graph end---------------------------*/
@@ -167,13 +177,12 @@ int main(void){
         if(buz_out & 0x02) { i_buzz = 5; } //decrease iterator
         if(buz_out & 0x01) { --i_buzz; }
         /*---------------------buzzer graph end-------------------------*/
+        if(tim_buzz) --tim_buzz; //decrease buzzer timer if > 0 
+        if(tim_controls) --tim_controls; //decrease controls timer if > 0
         while(!cycle){ //while cycle has not lasted 1/400s
             continue; //stay in the loop
         }
         cycle = 0;
-        if(tim_buzz) --tim_buzz; //decrease buzzer timer if > 0 
-        if(tim_controls) --tim_controls; //decrease controls timer if > 0
-        turn_pwm_off();
     }
 }
 
