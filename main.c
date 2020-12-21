@@ -57,6 +57,7 @@ volatile char cycle = 0;
 volatile uint8_t pwm = 255, count = 0;
 
 int main(void){
+
    /*----------display data start------------*/
     reg_data_t data;
     data.first = 0xff;
@@ -68,19 +69,19 @@ int main(void){
 
     /*multiplexer vars start------------------*/
     uint8_t i_mux = 0;
-    uint8_t pc_mux = 0, mux_out, mux_cond;
+    uint8_t pc_mux = 0, mux_out, mux_cond = 0;
     /*multiplexer vars end---------------------*/
 
     /*-------- buzzer vars start --------------*/
     uint8_t pc_buzz = 0, i_buzz = 0;
     uint16_t tim_buzz = 0;
-    char buz_out, buz_cond;
+    char buz_out, buz_cond = 0;
     /*-------- buzzer vars end ----------------*/
     /*--------------control vars start-------------*/
 
     char x = 0;
     uint8_t S1, S2, pc_controls = 0; 
-    char control_out, control_cond;
+    char control_out, control_cond = 0;
     uint8_t tim_controls = 0;
     /*--------------control vars end---------------*/
 
@@ -89,7 +90,7 @@ int main(void){
     controls_init(&PORTD, 1, &PORTD, 0); //init controls
     reg_pins(&PIND, &PIND); //register pins for controls
     init_spi();
-    send_set(&data);
+    
     sei();//enable interrupts
     DDRC  = 0x01; //buzzer out
 
@@ -101,7 +102,7 @@ int main(void){
 
 
         /*-----------------------------test-------------------------------*/
-        /*switch(disp_state){
+        switch(disp_state){
             case 1: disp_i = 1;
             data.first = 0x01;
             data.second = data.third = 0x00;
@@ -225,7 +226,7 @@ int main(void){
             break;
             
         }
-        send_set(&data); */
+        send_set(&data); 
         /*-----------------------------test-------------------------------*/
 
 
@@ -310,17 +311,17 @@ int main(void){
         if(tim_controls) --tim_controls; //decrease controls timer if > 0
         if(tim_disp) --tim_disp;
         while(!cycle) { continue; }
+        cycle = 0;
         count = 0;        
     }
 }
 
 ISR(TIMER1_COMPA_vect){//TIMER0_OVF_vect){
     cycle = 1;
-    //TCNT0 = 255 - 124;
 }
 ISR(TIMER2_COMP_vect){
     if(++count > pwm) { 
-        if(!(PORTD & (1 << PD6)))PORTD |= (1 << PD6);
+        if(!(PORTD & (1 << PD6)))PORTD |= (1 << PD6); //pwm
     }
     else PORTD &= ~(1 << PD6);
 }
