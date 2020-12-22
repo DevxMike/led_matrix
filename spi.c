@@ -1,8 +1,4 @@
 #include "spi.h"
-void init_spi(void){
-    DDRB |= (1 << PB3) | (1 << PB5) | (1 << PB2); //MOSI, SCK and !SS as outputs
-    SPCR |= (1 << SPE) | (1 << MSTR) | (1 << SPR1) | (1 << SPR0) | (1 << CPOL); //init spi, master mode, 64 prescaler
-}
 void send_byte(const uint8_t byte){
     SPDR = byte;
     while(!(SPSR & (1 << SPIF))) { continue; } //wait while transfer is not done
