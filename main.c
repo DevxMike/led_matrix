@@ -4,6 +4,8 @@
 
 #include "spi.h"
 #include "controls.h"
+#include "chars.h"
+
 
 #define T1_BUZZ 140
 #define T2_BUZZ 90
@@ -54,7 +56,7 @@ int main(void){
     OCR1AH = 0x3E;//1kHz
     OCR1AL = 0x7F;
     DDRB |= (1 << PB3) | (1 << PB5) | (1 << PB2); //MOSI, SCK and !SS as outputs
-    SPCR |= (1 << SPE) | (1 << MSTR) | (1 << SPR1) | (1 << SPR0); //init spi, master mode, 64 prescaler
+    SPCR |= (1 << SPE) | (1 << MSTR) | (1 << SPR1) | (1 << SPR0) | (1 << DORD); //init spi, master mode, 64 prescaler
     sei();
     TIMSK |= (1 << OCIE1A);
     DDRC = 0x01;
@@ -64,6 +66,13 @@ int main(void){
     
     
     uint8_t flags = 0x00;
+    /*----------display data start------------*/
+    reg_data_t data;
+    data.first = 0xff;
+    data.second = data.third = 0xff;
+    uint16_t tim_disp = 500;
+    uint8_t disp_state = 1, disp_i = 1;
+    /*----------display data end--------------*/
     /*-------- buzzer vars start --------------*/
     uint8_t pc_buzz = 0, i_buzz = 0;
     uint16_t tim_buzz = 0;
@@ -80,14 +89,139 @@ int main(void){
     /*multiplexer vars end---------------------*/
     controls_init(&PORTD, 1, &PORTD, 0); //init controls
     reg_pins(&PIND, &PIND); //register pins for controls
-    reg_data_t data = {0xff, 0xff, 0xff};
+
     send_set(&data);
 
     while(1){
         update_controls(); //update controls status
         S1 = incK; //store new S1 control status
         S2 = decK; //same as above
+         /*switch(disp_state){
+            case 1: disp_i = 1;
+            data.first = 0x01;
+            data.second = data.third = 0x00;
+            if(!tim_disp){ tim_disp = 100; disp_state = 2; }
+            break;
+            case 2: 
+            data.first = 0x02;
+            data.second = data.third = 0x00;
+            if(!tim_disp && !disp_i) {tim_disp = 100; disp_state = 1; }
+            else if(!tim_disp){ tim_disp = 100; disp_state = 3; }
+            break;
+            case 3: 
+            data.first = 0x04;
+            data.second = data.third = 0x00;
+            if(!tim_disp && !disp_i) {tim_disp = 100; disp_state = 2; }
+            else if(!tim_disp){ tim_disp = 100; disp_state = 4; }
+            break;
+            case 4: 
+            data.first = 0x08;
+            data.second = data.third = 0x00;
+            if(!tim_disp && !disp_i) {tim_disp = 100; disp_state = 3; }
+            else if(!tim_disp){ tim_disp = 100; disp_state = 5; }
+            break;
+            case 5: 
+            data.first = 0x10;
+            data.second = data.third = 0x00;
+            if(!tim_disp && !disp_i) {tim_disp = 100; disp_state = 4; }
+            else if(!tim_disp){ tim_disp = 100; disp_state = 6; }
+            break;
 
+            case 6: 
+            data.first = 0x40;
+            data.second = data.third = 0x00;
+            if(!tim_disp && !disp_i) {tim_disp = 100; disp_state = 5; }
+            else if(!tim_disp){ tim_disp = 100; disp_state = 7; }
+            break;
+            case 7: 
+            data.first = 0x80;
+            data.second = data.third = 0x00;
+            if(!tim_disp && !disp_i) {tim_disp = 100; disp_state = 6; }
+            else if(!tim_disp){ tim_disp = 100; disp_state = 8; }
+            break;
+            case 8: 
+            data.second = 0x01;
+            data.first = data.third = 0x00;
+            if(!tim_disp && !disp_i) {tim_disp = 100; disp_state = 7; }
+            else if(!tim_disp){ tim_disp = 100; disp_state = 9; }
+            break;
+            case 9: 
+            data.second = 0x02;
+            data.first = data.third = 0x00;
+            if(!tim_disp && !disp_i) {tim_disp = 100; disp_state = 8; }
+            else if(!tim_disp){ tim_disp = 100; disp_state = 10; }
+            break;
+            case 10: 
+            data.second = 0x04;
+            data.first = data.third = 0x00;
+            if(!tim_disp && !disp_i) {tim_disp = 100; disp_state = 9; }
+            else if(!tim_disp){ tim_disp = 100; disp_state = 11; }
+            break;
+
+            case 11: 
+            data.second = 0x10;
+            data.first = data.third = 0x00;
+            if(!tim_disp && !disp_i) {tim_disp = 100; disp_state = 10; }
+            else if(!tim_disp){ tim_disp = 100; disp_state = 12; }
+            break;
+            case 12: 
+            data.second = 0x20;
+            data.first = data.third = 0x00;
+            if(!tim_disp && !disp_i) {tim_disp = 100; disp_state = 11; }
+            else if(!tim_disp){ tim_disp = 100; disp_state = 13; }
+            break;
+            case 13: 
+            data.second = 0x40;
+            data.first = data.third = 0x00;
+            if(!tim_disp && !disp_i) {tim_disp = 100; disp_state = 12; }
+            else if(!tim_disp){ tim_disp = 100; disp_state = 14; }
+            break;
+            case 14: 
+            data.second = 0x80;
+            data.first = data.third = 0x00;
+            if(!tim_disp && !disp_i) {tim_disp = 100; disp_state = 13; }
+            else if(!tim_disp){ tim_disp = 100; disp_state = 15; }
+            break;
+            case 15:
+            data.third = 0x01;
+            data.first = data.second = 0x00;
+            if(!tim_disp && !disp_i) {tim_disp = 100; disp_state = 14; }
+            else if(!tim_disp){ tim_disp = 100; disp_state = 16; }
+            break;
+            
+            case 16:
+            data.third = 0x04;
+            data.first = data.second = 0x00;
+            if(!tim_disp && !disp_i) {tim_disp = 100; disp_state = 15; }
+            else if(!tim_disp){ tim_disp = 100; disp_state = 17; }
+            break;
+            case 17:
+            data.third = 0x08;
+            data.first = data.second = 0x00;
+            if(!tim_disp && !disp_i) {tim_disp = 100; disp_state = 16; }
+            else if(!tim_disp){ tim_disp = 100; disp_state = 18; }
+            break;
+            case 18:
+            data.third = 0x10;
+            data.first = data.second = 0x00;
+            if(!tim_disp && !disp_i) {tim_disp = 100; disp_state = 17; }
+            else if(!tim_disp){ tim_disp = 100; disp_state = 19; }
+            break;
+            case 19:
+            data.third = 0x20;
+            data.first = data.second = 0x00;
+            if(!tim_disp && !disp_i) {tim_disp = 100; disp_state = 18; }
+            else if(!tim_disp){ tim_disp = 100; disp_state = 20; }
+            break;
+            case 20:
+            data.third = 0x40;
+            data.first = data.second = 0x00;
+            if(!tim_disp){ tim_disp = 100; disp_i = 0; disp_state = 19; }
+            break;
+            
+        }
+        send_set(&data);*/ 
+        /*-----------------------------test-------------------------------*/
         /*-------------------buzzer graph start--------------------------*/
         buz_out = eeprom_read_byte(&PS_buzz[pc_buzz]); //get output setup            
         switch(eeprom_read_byte(&PW_buzz[pc_buzz])){ //check condition
@@ -105,8 +239,8 @@ int main(void){
             pc_buzz = eeprom_read_byte(&PA_buzz[pc_buzz]);
         }
 
-        if(buz_out & 0x80)PORTC = 0x01;  //turn buzzer on
-        else PORTC = 0x00; //turn buzzer off
+        if(buz_out & 0x80)PORTC = 0x00;  //turn buzzer on
+        else PORTC = 0x01; //turn buzzer off
         if(buz_out & 0x40) { tim_buzz = T1_BUZZ; } //set timers
         if(buz_out & 0x20) { tim_buzz = T2_BUZZ; }
         if(buz_out & 0x10) { tim_buzz = 4 * T1_BUZZ; }
@@ -142,32 +276,16 @@ int main(void){
         PORTD |= (1 << PD5); //disable mux
         PORTD &= ~(7 << 2); //zero out mux inputs
         i_mux = i_mux > 6? 0 : i_mux + 1;
+        prepare_set(9, 9, 9, 9, i_mux, &data);
+        send_set(&data);
         //send bytes to registers here
         PORTD |= (i_mux << 2);
         PORTD &= ~(1 << PD5); //enable mux
         /*----------------------------mux end-----------------------------*/
 
-        /*------------------------disp graph start-------------------------
-        mux_out = eeprom_read_byte(&PS_mux[pc_mux]);
-        switch(eeprom_read_byte(&PW_mux[pc_mux])){
-            case 0: mux_cond = 0; break;
-            case 1: mux_cond = 1; break;
-        }
-        if(mux_cond){
-            ++pc_mux;
-        }
-        else{
-            pc_mux = eeprom_read_byte(&PA_mux[pc_mux]);
-        }
-        PORTD |= (1 << PD5); //disable mux
-        PORTD &= ~(7 << 2); //zero out mux inputs
-        i_mux = mux_out;
-        //send bytes to registers here
-        PORTD |= (i_mux << 2);
-        PORTD &= ~(1 << PD5); //enable mux
-        ------------------------disp graph end---------------------------*/
         if(tim_buzz) --tim_buzz; //decrease buzzer timer if > 0 
         if(tim_controls) --tim_controls;
+        if(tim_disp) --tim_disp;
         while(!cycle)continue;
         cycle = 0;
     }
