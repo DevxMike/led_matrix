@@ -7,7 +7,6 @@
 enum dots_mode {
     none = 0, one, both
 };
-
 void prepare_set(uint8_t, uint8_t, uint8_t, uint8_t, uint8_t, reg_data_t*, uint8_t dots);
-extern uint8_t active_cols;
+extern volatile uint8_t pwm;
 #endif

@@ -45,7 +45,7 @@ const uint8_t EEMEM PA_buzz[] = {
 
 //cycle duration 1/1000s
 
-volatile uint8_t pwm = 255, count = 0;
+volatile uint8_t count = 0;
 
 
 volatile uint8_t cycle = 0;
@@ -149,7 +149,7 @@ int main(void){
         PORTD |= (1 << PD5); //disable mux
         PORTD &= ~(7 << 2); //zero out mux inputs
         i_mux = i_mux > 6? 0 : i_mux + 1;
-        prepare_set(val / 1000, (val / 100) % 10, (val / 10) % 10, val % 10, i_mux, &data, flags & (1 << 3)? both : none);
+        prepare_set(val / 1000, (val / 100) % 10, (val / 10) % 10, val % 10, i_mux, &data, flags & (1 << 3)? none : both);
         send_set(&data);
         //send bytes to registers here
         PORTD |= (i_mux << 2);
