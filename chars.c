@@ -11,7 +11,23 @@ const uint8_t EEMEM characters[][7] = {
     {0x1F, 0x11, 0x11, 0x1F, 0x11, 0x11, 0x1F}, //8
     {0x1F, 0x11, 0x11, 0x1F, 0x01, 0x01, 0x1F} //9
 };
-void prepare_set(uint8_t first, uint8_t second, uint8_t third, uint8_t fourth, uint8_t row, reg_data_t* set){
+const uint8_t EEMEM set_quantity[16] = {
+    0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4
+};
+
+uint8_t active_cols;
+uint8_t get_active_quantity(const reg_data_t* data){
+    uint8_t sum = 0x00;
+    sum += eeprom_read_byte(&set_quantity[data->first & 0x0F]);
+    sum += eeprom_read_byte(&set_quantity[(data->first >> 4) & 0x0F]);
+    sum += eeprom_read_byte(&set_quantity[data->second & 0x0F]);
+    sum += eeprom_read_byte(&set_quantity[(data->second >> 4) & 0x0F]);
+    sum += eeprom_read_byte(&set_quantity[data->third & 0x0F]);
+    sum += eeprom_read_byte(&set_quantity[(data->third >> 4) & 0x0F]);
+
+    return sum;
+}
+void prepare_set(uint8_t first, uint8_t second, uint8_t third, uint8_t fourth, uint8_t row, reg_data_t* set, uint8_t dots){
     first = eeprom_read_byte(&characters[first][row]); //read bytes from eemem defined by char codes
     second = eeprom_read_byte(&characters[second][row]);
     third = eeprom_read_byte(&characters[third][row]);
@@ -24,4 +40,10 @@ void prepare_set(uint8_t first, uint8_t second, uint8_t third, uint8_t fourth, u
     set->second |= (third & 0xFE) >> 1; //4 rows third digit
     set->third |= (third & 0x01) << 7; //set third digit
     set->third |= fourth << 1;
+    switch(dots){
+        case one: if(row == 5) { set->second |= (1 << 4); } break;
+        case both: if(row == 1 || row == 5) { set->second |= (1 << 4); } break;
+        break;
+    }
+    active_cols = get_active_quantity(set);
 }

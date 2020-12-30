@@ -45,7 +45,7 @@ const uint8_t EEMEM PA_buzz[] = {
 
 //cycle duration 1/1000s
 
-volatile uint8_t pwm = 200, count = 0;
+volatile uint8_t pwm = 255, count = 0;
 
 
 volatile uint8_t cycle = 0;
@@ -59,10 +59,10 @@ int main(void){
     DDRD = 0x7F & ~0x03; //set mux outs, dont interrupt S1 and S2
     
     /*test*/
-    uint16_t val = 0, val_tim = 0;
+    uint16_t val = 0, val_tim = 1000;
     /*test*/
     
-    uint8_t flags = 0x00;
+    uint8_t flags = 0x00; //first bit stands for alarm, second for single dot, third for both dots
     /*----------display data start------------*/
     reg_data_t data;
     data.first = 0xff;
@@ -145,10 +145,11 @@ int main(void){
         /*---------------------controls graph end-------------------------*/
         /*----------------------------mux start---------------------------*/
         turn_pwm_off();
+        count = 0;
         PORTD |= (1 << PD5); //disable mux
         PORTD &= ~(7 << 2); //zero out mux inputs
         i_mux = i_mux > 6? 0 : i_mux + 1;
-        prepare_set(val / 1000, (val / 100) % 10, (val / 10) % 10, val % 10, i_mux, &data);
+        prepare_set(val / 1000, (val / 100) % 10, (val / 10) % 10, val % 10, i_mux, &data, flags & (1 << 3)? both : none);
         send_set(&data);
         //send bytes to registers here
         PORTD |= (i_mux << 2);
@@ -158,7 +159,7 @@ int main(void){
 
         if(tim_buzz) --tim_buzz; //decrease buzzer timer if > 0 
         if(tim_controls) --tim_controls;
-        if(val_tim) --val_tim; else {val_tim = 500; if(++val > 9999) val = 0; }
+        if(val_tim) --val_tim; else {val_tim = 1000; if(flags & (1 << 3)) flags &= ~(1 << 3); else flags |= (1 << 3); if(++val > 9999) val = 0; }
         while(!cycle)continue;
         cycle = 0;
     }
