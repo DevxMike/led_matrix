@@ -5,7 +5,7 @@
 #include "spi.h"
 #include "controls.h"
 #include "chars.h"
-
+#include "timers.h"
 
 #define T1_BUZZ 140
 #define T2_BUZZ 90
@@ -45,33 +45,28 @@ const uint8_t EEMEM PA_buzz[] = {
 
 //cycle duration 1/1000s
 
-volatile uint8_t pwm = 255, count = 0;
+volatile uint8_t pwm = 200, count = 0;
 
 
 volatile uint8_t cycle = 0;
 
 int main(void){
-    TCCR1A = 0x00;
-    TCCR1B = (1 << WGM12) | (1 << CS10); 
-    OCR1AH = 0x3E;//1kHz
-    OCR1AL = 0x7F;
-    DDRB |= (1 << PB3) | (1 << PB5) | (1 << PB2); //MOSI, SCK and !SS as outputs
-    SPCR |= (1 << SPE) | (1 << MSTR) | (1 << SPR1) | (1 << SPR0) | (1 << DORD); //init spi, master mode, 64 prescaler
+    init_timers();
+    init_spi();
     sei();
-    TIMSK |= (1 << OCIE1A);
+    
     DDRC = 0x01;
     DDRD = 0x7F & ~0x03; //set mux outs, dont interrupt S1 and S2
     
-    
-    
+    /*test*/
+    uint16_t val = 0, val_tim = 0;
+    /*test*/
     
     uint8_t flags = 0x00;
     /*----------display data start------------*/
     reg_data_t data;
     data.first = 0xff;
     data.second = data.third = 0xff;
-    uint16_t tim_disp = 500;
-    uint8_t disp_state = 1, disp_i = 1;
     /*----------display data end--------------*/
     /*-------- buzzer vars start --------------*/
     uint8_t pc_buzz = 0, i_buzz = 0;
@@ -115,8 +110,8 @@ int main(void){
             pc_buzz = eeprom_read_byte(&PA_buzz[pc_buzz]);
         }
 
-        if(buz_out & 0x80)PORTC = 0x00;  //turn buzzer on
-        else PORTC = 0x01; //turn buzzer off
+        if(buz_out & 0x80) { PORTC = 0x00; }  //turn buzzer on
+        else { PORTC = 0x01; } //turn buzzer off
         if(buz_out & 0x40) { tim_buzz = T1_BUZZ; } //set timers
         if(buz_out & 0x20) { tim_buzz = T2_BUZZ; }
         if(buz_out & 0x10) { tim_buzz = 4 * T1_BUZZ; }
@@ -149,23 +144,29 @@ int main(void){
         if(control_out & 0x01) { tim_controls = T2_CONTROLS; }
         /*---------------------controls graph end-------------------------*/
         /*----------------------------mux start---------------------------*/
+        turn_pwm_off();
         PORTD |= (1 << PD5); //disable mux
         PORTD &= ~(7 << 2); //zero out mux inputs
         i_mux = i_mux > 6? 0 : i_mux + 1;
-        prepare_set(9, 9, 9, 9, i_mux, &data);
+        prepare_set(val / 1000, (val / 100) % 10, (val / 10) % 10, val % 10, i_mux, &data);
         send_set(&data);
         //send bytes to registers here
         PORTD |= (i_mux << 2);
         PORTD &= ~(1 << PD5); //enable mux
+        turn_pwm_on();
         /*----------------------------mux end-----------------------------*/
 
         if(tim_buzz) --tim_buzz; //decrease buzzer timer if > 0 
         if(tim_controls) --tim_controls;
-        if(tim_disp) --tim_disp;
+        if(val_tim) --val_tim; else {val_tim = 500; if(++val > 9999) val = 0; }
         while(!cycle)continue;
         cycle = 0;
     }
 }
 ISR(TIMER1_COMPA_vect){
     cycle = 1;
+}
+ISR(TIMER2_COMP_vect){
+    if(++count <= pwm) { PORTD &= ~(1 << PD6); }
+    else { PORTD |= (1 << PD6); }
 }

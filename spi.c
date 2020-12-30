@@ -16,3 +16,7 @@ void send_set(const reg_data_t* data){ //send 3 bytes set
     send_byte(data->first);
     set_ss();
 }
+void init_spi(void){
+    DDRB |= (1 << PB3) | (1 << PB5) | (1 << PB2); //MOSI, SCK and !SS as outputs
+    SPCR |= (1 << SPE) | (1 << MSTR) | (1 << SPR1) | (1 << SPR0) | (1 << DORD); //init spi, master mode, 64 prescaler
+}
