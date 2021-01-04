@@ -13,6 +13,33 @@
 #define T2_CONTROLS 255
 #define ALARM_MASK 0x01
 
+const uint8_t EEMEM PS_MAIN[] = {
+    0x20, 0x00, 0x00, 0x08, 0x00, 0x00, 0x08, 0x00, 0x00,
+    0x20, 0x04, 0x00, 0x00, 0x00, 0x40, 0x20, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x02, 0x20, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x20, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x01, 0x20
+};
+
+const uint8_t EEMEM PW_MAIN[] = {
+    1, 2, 3, 1, 2, 3, 1, 2, 3,
+    0, 1, 4, 5, 4, 2, 1, 6, 7,
+    8, 4, 9, 0, 1, 4, 10, 11, 
+    4, 6, 4, 0, 1, 4, 12, 13, 4,
+    8, 4, 14, 0, 1, 4, 15, 16, 4, 7,
+    4, 0
+};
+
+const uint8_t EEMEM PA_MAIN[] = {
+    0, 10, 1, 0, 10, 4, 0, 10, 7,
+    0, 0, 0, 11, 0, 13, 0, 22, 39,
+    30, 0, 0, 16, 0, 0, 15, 23,
+    0, 26, 0, 15, 0, 0, 15, 31, 0, 
+    34, 0, 36, 15, 0, 0, 15, 40, 0, 43,
+    0, 15
+};
+
 const uint8_t EEMEM PS_controls[] = {
     0x00, 0x00, 0x02,0x00, 0x00, 0x00, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00,
     0x00, 0x00, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
@@ -63,25 +90,41 @@ int main(void){
     /*test*/
     
     uint8_t flags = 0x00; //first bit stands for alarm, second for single dot, third for both dots
+    
+    
     /*----------display data start------------*/
     reg_data_t data;
     data.first = 0xff;
     data.second = data.third = 0xff;
     /*----------display data end--------------*/
+    
+    
     /*-------- buzzer vars start --------------*/
     uint8_t pc_buzz = 0, i_buzz = 0;
     uint16_t tim_buzz = 0;
     char buz_out, buz_cond = 0;
     /*-------- buzzer vars end ----------------*/
+    
+    
     /*---------------------controls------------*/
     char x = 0;
     uint8_t S1, S2, pc_controls = 0; 
     char control_out, control_cond = 0;
     uint8_t tim_controls = 0;
     /*----------controls end-------------------*/
+    
+    
     /*multiplexer vars start------------------*/
     uint8_t i_mux = 0;
     /*multiplexer vars end---------------------*/
+
+
+
+
+
+
+
+
     controls_init(&PORTD, 1, &PORTD, 0); //init controls
     function_init(&PORTC, 2, &PORTC, 1);
     reg_fn_pins(&PINC, &PINC);
