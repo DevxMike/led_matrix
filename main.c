@@ -251,10 +251,16 @@ int main(void){
             dot = none;
         }
         else if(pc_main >= 16 && pc_main <= 21){
-            fourth = 0; third = 0; second = 0; first = 0;
+            //fourth = 0; third = 0; second = 0; first = 0;
             dot = 0;
             switch(main_iter){
-                
+                case 0: fourth = 20; third = 14; second = 16; first = 13; break;
+                case 1: fourth = 12; third = 10; second = 20; first = 13; break;
+                case 2: fourth = 11; third = 21; second = 23; first = 23; break;
+                case 3: fourth = 19; third = 17; second = 23; first = 13; break;
+                case 4: fourth = 19; third = 24; second = 10; first = 15; break;
+                case 5: fourth = 18; third = 24; second = 10; first = 15; break;
+                case 6: fourth = 13; third = 22; second = 14; first = 20; break;
             }
         }
 
