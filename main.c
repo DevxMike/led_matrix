@@ -57,7 +57,7 @@ int main(void){
     
     DDRC = 0x01;
     DDRD = 0x7F & ~0x03; //set mux outs, dont interrupt S1 and S2
-    
+
     /*test*/
     uint16_t val = 0, val_tim = 1000;
     /*test*/
@@ -83,6 +83,8 @@ int main(void){
     uint8_t i_mux = 0;
     /*multiplexer vars end---------------------*/
     controls_init(&PORTD, 1, &PORTD, 0); //init controls
+    function_init(&PORTC, 2, &PORTC, 1);
+    reg_fn_pins(&PINC, &PINC);
     reg_pins(&PIND, &PIND); //register pins for controls
 
     send_set(&data);
@@ -91,7 +93,6 @@ int main(void){
         update_controls(); //update controls status
         S1 = incK; //store new S1 control status
         S2 = decK; //same as above
-
         
         /*-------------------buzzer graph start--------------------------*/
         buz_out = eeprom_read_byte(&PS_buzz[pc_buzz]); //get output setup            
