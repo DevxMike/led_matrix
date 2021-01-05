@@ -15,29 +15,29 @@
 
 const uint8_t EEMEM PS_MAIN[] = {
     0x20, 0x00, 0x00, 0x10, 0x00, 0x00, 0x10, 0x00, 0x00,
-    0x20, 0x08, 0x00, 0x00, 0x00, 0x40, 0x20, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x02, 0x20, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x20, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x01, 0x20
+    0x10, 0x08, 0x00, 0x00, 0x00, 0x00, 0x40, 0x20, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x02, 0x20, 0x04, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x20, 0x04, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x01, 0x20
 };
 
 const uint8_t EEMEM PW_MAIN[] = {
     1, 2, 3, 1, 2, 3, 1, 2, 3,
-    0, 1, 4, 5, 4, 2, 1, 6, 7,
-    8, 4, 9, 0, 1, 4, 10, 11, 
-    4, 6, 4, 0, 1, 4, 12, 13, 4,
-    8, 4, 14, 0, 1, 4, 15, 16, 4, 7,
-    4, 0
+    0, 1, 4, 17, 5, 4, 2, 1, 6,
+    7, 8, 4, 9, 0, 1, 4, 10, 11,
+    4,  6, 4, 0, 1,  4, 12, 13, 4,
+    8, 4, 14, 0, 1, 4, 15, 16, 4,
+    7, 4, 0
 };
 
 const uint8_t EEMEM PA_MAIN[] = {
     0, 10, 1, 0, 10, 4, 0, 10, 7,
-    0, 0, 0, 11, 0, 13, 0, 22, 39,
-    30, 0, 0, 16, 0, 0, 15, 23,
-    0, 26, 0, 15, 0, 0, 15, 31, 0, 
-    34, 0, 36, 15, 0, 0, 15, 40, 0, 43,
-    0, 15
+    0, 0, 0, 0, 11, 0, 14, 0, 23,
+    40, 31, 0, 0, 17, 0, 0, 16, 24,
+    0, 27, 0, 16, 0, 0, 16, 32, 0,
+    35, 0, 37, 16, 0, 0, 16, 41, 0,
+    44, 0, 16
 };
 
 const uint8_t EEMEM PS_controls[] = {
@@ -163,6 +163,7 @@ int main(void){
             case 14: main_cond = 1; break; //EXIT condition
             case 15: main_cond = !tim_main || S2; break;
             case 16: main_cond = !tim_main && S2; break;
+            case 17: main_cond = !tim_main || S4; break;
         }
         if(main_cond){
             ++pc_main;
@@ -250,7 +251,7 @@ int main(void){
             fourth = 2; third = 0; second = 2; first = 1;
             dot = none;
         }
-        else if(pc_main >= 16 && pc_main <= 21){
+        else if(pc_main >= 17 && pc_main <= 22){
             //fourth = 0; third = 0; second = 0; first = 0;
             dot = 0;
             switch(main_iter){
