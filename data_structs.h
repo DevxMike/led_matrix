@@ -3,11 +3,15 @@
 #include <avr/io.h>
 
 typedef struct{
-    uint8_t hours, mins;
+    uint8_t hours : 5;
+    uint8_t mins : 6;
 }time_t;
 
 typedef struct{
-    uint8_t year, month, day_1, day_2; //day_1 - day of month, day_2 - day of week
+    uint8_t year : 7; //max val = 99
+    uint8_t month : 4; //max val = 15
+    uint8_t day_1 : 5; //max val = 31
+    uint8_t day_2: 3; //day_1 - day of month, day_2 - day of week
 }date_t;
 
 typedef struct{
