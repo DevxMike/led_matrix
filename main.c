@@ -6,6 +6,7 @@
 #include "controls.h"
 #include "chars.h"
 #include "timers.h"
+#include "twi.h"
 
 #define T1_BUZZ 140
 #define T2_BUZZ 90
@@ -73,13 +74,14 @@ const uint8_t EEMEM PA_buzz[] = {
 //cycle duration 1/1000s
 
 volatile uint8_t count = 0;
-
-
 volatile uint8_t cycle = 0;
+static uint8_t date_buff[7] = {0};
 
 int main(void){
     init_timers();
     init_spi();
+    TWBR = 72; //TWI prescaler ~91kHz
+    init_RTC();
     sei();
     
     DDRC = 0x01;
@@ -89,9 +91,15 @@ int main(void){
     uint16_t val = 0, val_tim = 1000;
     /*test*/
     
-    uint8_t flags = 0x00; //first bit stands for alarm, second for single dot, third for both dots
+    uint8_t flags = 0x00; //first bit stands for alarm, second for buzzing while mins == secs == 00
     
     
+    /*date*/
+    time_data_t matrix_date = {{0, 0, 0, 0}, {0, 0, 0}};
+    uint8_t date_state = 1;
+    uint16_t date_tim = 1000;
+    /*date*/
+
     /*----------display data start------------*/
     reg_data_t data;
     data.first = 0xff;
@@ -99,7 +107,6 @@ int main(void){
     uint8_t first = 0, second = 0, third = 0, fourth = 0; //chars to be displayed
     char dot = 0;
     /*----------display data end--------------*/
-    
     
     /*-------- buzzer vars start --------------*/
     uint8_t pc_buzz = 0, i_buzz = 0;
@@ -133,6 +140,7 @@ int main(void){
     function_init(&PORTB, 1, &PORTD, 7);
     reg_fn_pins(&PINB, &PIND);
     reg_pins(&PIND, &PIND); //register pins for controls
+    
 
     send_set(&data);
 
@@ -179,6 +187,38 @@ int main(void){
         if(main_out & 0x20) { tim_main = 20000; }
         if(main_out & 0x40) { main_iter = 0; }
         /*---------------------main graph end----------------------------*/
+
+        /*---------------------date update start-------------------------*/
+        switch(date_state){
+            case 1:
+            read_buff(SLAVE, 0x00, 7, date_buff);
+            date_state = 2;
+            break;
+            case 2:
+            matrix_date.time.seconds = bcd_to_dec(date_buff[0]);
+            matrix_date.time.mins = bcd_to_dec(date_buff[1]);
+            matrix_date.time.hours = bcd_to_dec(date_buff[2]);
+            matrix_date.date.day_2 = bcd_to_dec(date_buff[3]);
+            matrix_date.date.day_1 = bcd_to_dec(date_buff[4]);
+            matrix_date.date.month = bcd_to_dec(date_buff[5]);
+            matrix_date.date.year = bcd_to_dec(date_buff[6]);
+            if(matrix_date.time.mins == 0 && matrix_date.time.seconds == 0){
+                flags |= (1 << 1);
+            }
+            else{
+                flags &= ~(1 << 1);
+            }
+            date_tim = 1000;
+            date_state = 3;
+            break;
+            case 3:
+            if(!date_tim){
+                date_state = 1;
+            }
+            break;
+        }
+        /*---------------------date update end---------------------------*/
+
 
 
 
@@ -238,22 +278,29 @@ int main(void){
         /*---------------------content to be displayed--------------------*/
         
         if(pc_main > 0 && pc_main <= 2){ //date and time temporarily static
-            fourth = val / 1000; third = (val / 100) % 10;
-            second = (val / 10) % 10; first = val % 10;
-            if(first % 2) dot = both;
+            fourth = matrix_date.time.hours / 10;
+            third = matrix_date.time.hours % 10;
+            second = matrix_date.time.mins / 10;
+            first = matrix_date.time.mins % 10;
+            if(matrix_date.time.seconds % 2) dot = both;
             else dot = none;
         }
         else if(pc_main >= 3 && pc_main <= 5){
-            fourth = 0; third = 1; second = 0; first = 4;
+            fourth = matrix_date.date.month / 10; 
+            third = matrix_date.date.month % 10; 
+            second = matrix_date.date.day_1 / 10; 
+            first = matrix_date.date.day_1 % 10;
             dot = one;
         }
         else if(pc_main >= 6 && pc_main <= 8){
-            fourth = 2; third = 0; second = 2; first = 1;
+            fourth = 2; third = 0; 
+            second = matrix_date.date.year / 10; 
+            first = matrix_date.date.year % 10;
             dot = none;
         }
         else if(pc_main >= 17 && pc_main <= 22){
             //fourth = 0; third = 0; second = 0; first = 0;
-            dot = 0;
+            dot = none;
             switch(main_iter){
                 case 0: fourth = 20; third = 14; second = 16; first = 13; break;
                 case 1: fourth = 12; third = 10; second = 20; first = 13; break;
@@ -285,6 +332,7 @@ int main(void){
         if(tim_controls) --tim_controls;
         if(val_tim) --val_tim; else {val_tim = 1000; if(++val > 9999) val = 0; }
         if(tim_main) --tim_main;
+        if(date_tim) --date_tim;
         while(!cycle)continue;
         cycle = 0;
     }

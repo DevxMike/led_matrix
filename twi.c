@@ -2,28 +2,24 @@
 
 void TWI_START(void){
     TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWSTA); //enable TWI, clear TWINT and START 
-    while(!(TWCR & (1 << TWINT))) { 
-        continue; 
-    }
+    while(!(TWCR & (1 << TWINT)));
 }
 void TWI_STOP(void){
     TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWSTO); //clear TWINT, enable TWI and STOP
-    while(!(TWCR & (1 << TWINT))) { 
-        continue; 
-    }
+    return;
+    while(!(TWCR & (1 << TWINT)));
 }
 void TWI_WRITE(uint8_t byte){
     TWDR = byte; //place byte desired to send into reg
     TWCR = (1 << TWINT) | (1 << TWEN); //start transmission
+    while(!(TWCR & (1 << TWINT)));
 }
 uint8_t TWI_READ(uint8_t ack_bit){
     TWCR = (1 << TWINT) | (1 << TWEN) | (ack_bit << TWEA);
-    while(!(TWCR & (1 << TWINT))) { 
-        continue; 
-    }
+    while(!(TWCR & (1 << TWINT)));
     return TWDR;
 }
-void write_buff(uint8_t slave, uint8_t ram_adr, uint8_t len, const uint8_t* buff){
+uint8_t write_buff(uint8_t slave, uint8_t ram_adr, uint8_t len, const uint8_t* buff){
     TWI_START();
     TWI_WRITE(slave);
     TWI_WRITE(ram_adr);
@@ -31,6 +27,7 @@ void write_buff(uint8_t slave, uint8_t ram_adr, uint8_t len, const uint8_t* buff
         TWI_WRITE(*buff++);
     }
     TWI_STOP();
+    return 0;
 }
 void read_buff(uint8_t slave, uint8_t ram_adr, uint8_t len, uint8_t* buff){
     TWI_START();
@@ -39,7 +36,12 @@ void read_buff(uint8_t slave, uint8_t ram_adr, uint8_t len, uint8_t* buff){
     TWI_START();
     TWI_WRITE(slave + 1);
     while(len--){
-        *buff++ = TWI_READ(len? 1 : 0);
+        *buff++ = TWI_READ(len != 0? 1 : 0);
     }
     TWI_STOP();
+}
+uint8_t init_RTC(void){
+    uint8_t buff[8] = { 0x00, 0x40, 0x00, 0x01, 0x26, 0x01, 0x21, 0x00 };
+    write_buff(SLAVE, 0x00, 8, buff);
+    return 0;
 }
