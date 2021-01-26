@@ -13,7 +13,7 @@
 #define T1_CONTROLS 100
 #define T2_CONTROLS 255
 #define ALARM_MASK 0x01
-
+#define EXIT_CONDITION 0x04
 const uint8_t EEMEM PS_MAIN[] = {
     0x20, 0x00, 0x00, 0x10, 0x00, 0x00, 0x10, 0x00, 0x00,
     0x10, 0x08, 0x00, 0x00, 0x00, 0x00, 0x40, 0x20, 0x00,
@@ -37,7 +37,7 @@ const uint8_t EEMEM PA_MAIN[] = {
     0, 0, 0, 0, 11, 0, 14, 0, 23,
     40, 31, 0, 0, 17, 0, 0, 16, 24,
     0, 27, 0, 16, 0, 0, 16, 32, 0,
-    35, 0, 37, 16, 0, 0, 16, 41, 0,
+    35, 0, 37, 14, 0, 0, 16, 41, 0,
     44, 0, 16
 };
 
@@ -92,7 +92,7 @@ int main(void){
     uint16_t val = 0, val_tim = 1000;
     /*test*/
     
-    uint8_t flags = 0x00; //first bit stands for alarm, second for buzzing while mins == secs == 00
+    uint8_t flags = 0x00; //first bit stands for alarm, second for buzzing while mins == secs == 00, third exit
     
     
     /*date*/
@@ -151,7 +151,6 @@ int main(void){
         S2 = decK; //same as above
         S3 = okK; 
         S4 = functionK;
-
         /*---------------------main graph start--------------------------*/
         main_out = eeprom_read_byte(&PS_MAIN[pc_main]);
         switch(eeprom_read_byte(&PW_MAIN[pc_main])){
@@ -169,7 +168,7 @@ int main(void){
             case 11: main_cond = !tim_main && S1; break;
             case 12: main_cond = !tim_main || S3; break;
             case 13: main_cond = !tim_main && S3; break;
-            case 14: main_cond = 1; break; //EXIT condition
+            case 14: main_cond = flags & EXIT_CONDITION; break; 
             case 15: main_cond = !tim_main || S2; break;
             case 16: main_cond = !tim_main && S2; break;
             case 17: main_cond = !tim_main || S4; break;
@@ -279,6 +278,7 @@ int main(void){
         /*---------------------content to be displayed--------------------*/
         
         if(pc_main > 0 && pc_main <= 2){ //date and time temporarily static
+            flags &= ~EXIT_CONDITION; //zero-out exit condition
             fourth = matrix_date.time.hours / 10;
             third = matrix_date.time.hours % 10;
             second = matrix_date.time.mins / 10;
@@ -299,7 +299,7 @@ int main(void){
             first = matrix_date.date.year % 10;
             dot = none;
         }
-        else if(pc_main >= 17 && pc_main <= 22){
+        else if(pc_main >= 15 && pc_main <= 22){
             //fourth = 0; third = 0; second = 0; first = 0;
             dot = none;
             switch(main_iter){
@@ -311,6 +311,11 @@ int main(void){
                 case 5: fourth = 18; third = 24; second = 10; first = 15; break;
                 case 6: fourth = 13; third = 22; second = 14; first = 20; break;
             }
+        }
+        if(pc_main >= 31 && pc_main <= 38){
+            if(main_iter == 6) { pc_main = 0; } //exit
+
+            else { flags |= EXIT_CONDITION; } //to do
         }
 
         /*---------------------content to be displayed--------------------*/
