@@ -144,7 +144,7 @@ int main(void){
     
 
     send_set(&data);
-    
+
     while(1){
         update_controls(); //update controls status
         S1 = incK; //store new S1 control status
@@ -294,7 +294,7 @@ int main(void){
             dot = one;
         }
         else if(pc_main >= 6 && pc_main <= 8){
-            fourth = 2; third = matrix_date.date.day_2; 
+            fourth = 2; third = 0; 
             second = matrix_date.date.year / 10; 
             first = matrix_date.date.year % 10;
             dot = none;
