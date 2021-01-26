@@ -41,7 +41,14 @@ void read_buff(uint8_t slave, uint8_t ram_adr, uint8_t len, uint8_t* buff){
     TWI_STOP();
 }
 uint8_t init_RTC(void){
-    uint8_t buff[8] = { 0x00, 0x40, 0x00, 0x01, 0x26, 0x01, 0x21, 0x00 };
+    uint8_t buff[8] = { 0x00, 0x00, 0x00, 0x01, 0x25, 0x01, 0x21, 0x00 };
     write_buff(SLAVE, 0x00, 8, buff);
     return 0;
+}
+uint8_t day_of_week(uint16_t y, uint8_t m, uint8_t d){ 
+    static int t[] = {0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4}; 
+    if( m < 3 ) { 
+        y -= 1; 
+    } 
+    return (y + y/4 - y/100 + y/400 + t[m-1] + d) % 7; 
 }

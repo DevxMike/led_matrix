@@ -84,6 +84,7 @@ int main(void){
     init_RTC();
     sei();
     
+    
     DDRC = 0x01;
     DDRD = 0x7F & ~0x03; //set mux outs, dont interrupt S1 and S2
 
@@ -143,7 +144,7 @@ int main(void){
     
 
     send_set(&data);
-
+    
     while(1){
         update_controls(); //update controls status
         S1 = incK; //store new S1 control status
@@ -286,14 +287,14 @@ int main(void){
             else dot = none;
         }
         else if(pc_main >= 3 && pc_main <= 5){
-            fourth = matrix_date.date.month / 10; 
-            third = matrix_date.date.month % 10; 
-            second = matrix_date.date.day_1 / 10; 
-            first = matrix_date.date.day_1 % 10;
+            second = matrix_date.date.month / 10; 
+            first = matrix_date.date.month % 10; 
+            fourth = matrix_date.date.day_1 / 10; 
+            third = matrix_date.date.day_1 % 10;
             dot = one;
         }
         else if(pc_main >= 6 && pc_main <= 8){
-            fourth = 2; third = 0; 
+            fourth = 2; third = matrix_date.date.day_2; 
             second = matrix_date.date.year / 10; 
             first = matrix_date.date.year % 10;
             dot = none;
