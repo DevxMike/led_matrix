@@ -128,10 +128,10 @@ int main(void){
     /*----------controls end-------------------*/
     
     /*--------------main graph vars start------*/
-    uint8_t S3, S4, pc_main = 0;
+    uint8_t S3, S4, pc_main = 0, side_tim = 0;
     char main_out = 0x00, main_cond = 0;
     uint16_t tim_main = 0;
-    char main_iter = 0;
+    char main_iter = 0, side_iter = 0, side_state = 1;
     /*--------------main graph vars end--------*/
 
 
@@ -148,7 +148,6 @@ int main(void){
     
 
     send_set(&data);
-    flags |= BUZZ_ENABLED;
 
     while(1){
         update_controls(); //update controls status
@@ -337,6 +336,8 @@ int main(void){
         else if(pc_main >= 15 && pc_main <= 22){
             //fourth = 0; third = 0; second = 0; first = 0;
             flags &= ~EXIT_CONDITION; //zero-out exit condition
+            side_iter = 0;
+            side_state = 1;
             dot = none;
             switch(main_iter){
                 case 0: fourth = 20; third = 14; second = 16; first = 13; break;
@@ -348,10 +349,80 @@ int main(void){
                 case 6: fourth = 13; third = 22; second = 14; first = 20; break;
             }
         }
-        if(pc_main >= 31 && pc_main <= 38){
+        if(pc_main == 36) tim_main = 30000;
+        if(pc_main >= 37 && pc_main <= 38){
             if(main_iter == 6) { pc_main = 0; } //exit
+            switch(main_iter){
+                case 0: //time
+                break;
 
-            else { flags |= EXIT_CONDITION; } //to do
+                case 1: //date
+                break;
+                
+                case 2: //buzz
+                    switch(side_iter){
+                        case 0: fourth = 26; third = 28; second = 28; first = 27; break;
+                        case 1: fourth = 26; third = 17; second = 27; first = 27; break;
+                        case 2: fourth = 13; third = 22; second = 14; first = 20; break;
+                    }
+
+                    switch(side_state){
+                        /*-----------------------control graph-----------------------*/
+                        case 1:
+                        if(S3 && pc_main > 36){ tim_main = 30000; side_tim = 60; side_state = 2; }
+                        else if(S1) { tim_main = 30000; side_tim = 60; side_state = 4; }
+                        else if(S2) { tim_main = 30000; side_tim = 60; side_state = 6; }
+                        break;
+                        case 2:
+                        if(side_tim && !S3) { tim_main = 30000; side_state = 1; }
+                        else if(!side_tim && S3) {tim_main = 30000; side_state = 3; }
+                        break;
+                        case 3:
+                        if(!S3) { 
+                            switch(side_iter){
+                                case 0: 
+                                flags &= BUZZ_ENABLED;
+                                break;
+                                case 1:
+                                if(!(flags & BUZZ_ENABLED)){
+                                    flags |= BUZZ_ENABLED;
+                                }
+                                break;
+                                case 2:
+                                flags |= EXIT_CONDITION;
+                                break;
+                            } 
+                            side_state = 1; if(!(flags & EXIT_CONDITION)) flags |= EXIT_CONDITION;
+                        }
+                        break;
+                        case 4:
+                        if(side_tim && !S1) { tim_main = 30000; side_state = 1; }
+                        else if(!side_tim && S1) { tim_main = 30000; side_state = 5; if(++side_iter > 2) side_iter = 0; }
+                        break;
+                        case 5:
+                        if(!S1) { tim_main = 30000; side_state = 1; }
+                        break;
+                        case 6:
+                        if(side_tim && !S2) { tim_main = 30000; side_state = 1; }
+                        else if(!side_tim && S2) { tim_main = 30000; side_state = 7; if(--side_iter < 0) side_iter = 2; }
+                        break;
+                        case 7:
+                        if(!S2) { tim_main = 30000; side_state = 1; }
+                        break;
+                    }
+                    /*-----------------------control graph-----------------------*/
+                break;
+
+                case 3: //snoze
+                break;
+
+                case 4: //single alm set
+                break;
+
+                case 5: //alm with repetition set
+                break;
+            }
+            if(!tim_main) { flags |= EXIT_CONDITION; } 
         }
 
         /*---------------------content to be displayed--------------------*/
@@ -382,6 +453,7 @@ int main(void){
         if(tim_main) --tim_main;
         if(date_tim) --date_tim;
         if(tim_hour_buzz) --tim_hour_buzz;
+        if(side_tim) --side_tim;
         while(!cycle)continue;
         cycle = 0;
     }

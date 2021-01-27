@@ -41,7 +41,7 @@ void read_buff(uint8_t slave, uint8_t ram_adr, uint8_t len, uint8_t* buff){
     TWI_STOP();
 }
 uint8_t init_RTC(void){
-    uint8_t buff[8] = { 0x00, 0x00, 0x00, 0x01, 0x25, 0x01, 0x21, 0x00 };
+    uint8_t buff[8] = { 0x00, 0x59, 0x00, 0x01, 0x25, 0x01, 0x21, 0x00 };
     write_buff(SLAVE, 0x00, 8, buff);
     return 0;
 }
