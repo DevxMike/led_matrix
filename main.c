@@ -8,10 +8,10 @@
 #include "timers.h"
 #include "twi.h"
 
-#define T1_BUZZ 140
-#define T2_BUZZ 90
-#define T1_CONTROLS 100
-#define T2_CONTROLS 255
+#define T1_BUZZ 240
+#define T2_BUZZ 180
+#define T1_CONTROLS 200
+#define T2_CONTROLS 510
 #define ALARM_MASK 0x01
 #define EXIT_CONDITION 0x04
 const uint8_t EEMEM PS_MAIN[] = {
@@ -71,7 +71,7 @@ const uint8_t EEMEM PA_buzz[] = {
     39, 35
 };
 
-//cycle duration 1/1000s
+//cycle duration 1/2000s
 
 volatile uint8_t count = 0;
 volatile uint8_t cycle = 0;
@@ -87,10 +87,6 @@ int main(void){
     
     DDRC = 0x01;
     DDRD = 0x7F & ~0x03; //set mux outs, dont interrupt S1 and S2
-
-    /*test*/
-    uint16_t val = 0, val_tim = 1000;
-    /*test*/
     
     uint8_t flags = 0x00; //first bit stands for alarm, second for buzzing while mins == secs == 00, third exit
     
@@ -120,7 +116,7 @@ int main(void){
     char x = 0;
     uint8_t S1, S2, pc_controls = 0; 
     char control_out, control_cond = 0;
-    uint8_t tim_controls = 0;
+    uint16_t tim_controls = 0;
     /*----------controls end-------------------*/
     
     /*--------------main graph vars start------*/
@@ -208,7 +204,7 @@ int main(void){
             else{
                 flags &= ~(1 << 1);
             }
-            date_tim = 1000;
+            date_tim = 2000;
             date_state = 3;
             break;
             case 3:
@@ -325,9 +321,9 @@ int main(void){
         /*---------------------content to be displayed--------------------*/
 
         /*----------------------------mux start---------------------------*/
-        turn_pwm_off();
         count = 0;
         PORTD |= (1 << PD5); //disable mux
+        PORTD |= (1 << PD6); 
         PORTD &= ~(7 << 2); //zero out mux inputs
         i_mux = i_mux > 6? 0 : i_mux + 1;
         prepare_set(fourth, third, second, first, i_mux, &data, dot);
@@ -335,12 +331,11 @@ int main(void){
         //send bytes to registers here
         PORTD |= (i_mux << 2);
         PORTD &= ~(1 << PD5); //enable mux
-        turn_pwm_on();
+        PORTD &= ~(1 << PD6);
         /*----------------------------mux end-----------------------------*/
 
         if(tim_buzz) --tim_buzz; //decrease buzzer timer if > 0 
         if(tim_controls) --tim_controls;
-        if(val_tim) --val_tim; else {val_tim = 1000; if(++val > 9999) val = 0; }
         if(tim_main) --tim_main;
         if(date_tim) --date_tim;
         while(!cycle)continue;
@@ -351,6 +346,6 @@ ISR(TIMER1_COMPA_vect){
     cycle = 1;
 }
 ISR(TIMER2_COMP_vect){
-    if(++count <= pwm) { PORTD &= ~(1 << PD6); }
-    else { PORTD |= (1 << PD6); }
+    //if(++count <= pwm) { PORTD &= ~(1 << PD6); }
+    //else { PORTD |= (1 << PD6); }
 }
