@@ -278,7 +278,6 @@ int main(void){
         /*---------------------content to be displayed--------------------*/
         
         if(pc_main > 0 && pc_main <= 2){ //date and time temporarily static
-            flags &= ~EXIT_CONDITION; //zero-out exit condition
             fourth = matrix_date.time.hours / 10;
             third = matrix_date.time.hours % 10;
             second = matrix_date.time.mins / 10;
@@ -299,8 +298,13 @@ int main(void){
             first = matrix_date.date.year % 10;
             dot = none;
         }
+        else if(pc_main >= 10 && pc_main < 14){
+            first = 12; second = 15; third = 26; fourth = 25;
+            dot = none;
+        }
         else if(pc_main >= 15 && pc_main <= 22){
             //fourth = 0; third = 0; second = 0; first = 0;
+            flags &= ~EXIT_CONDITION; //zero-out exit condition
             dot = none;
             switch(main_iter){
                 case 0: fourth = 20; third = 14; second = 16; first = 13; break;
