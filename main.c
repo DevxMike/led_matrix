@@ -1,6 +1,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <avr/eeprom.h>
+#include <util/delay.h>
 
 #include "spi.h"
 #include "controls.h"
@@ -13,7 +14,12 @@
 #define T1_CONTROLS 200
 #define T2_CONTROLS 510
 #define ALARM_MASK 0x01
+#define NEW_HOUR 0x02
 #define EXIT_CONDITION 0x04
+#define BUZZ_ENABLED 0x08
+#define TURN_BUZZER_ON PORTC &= ~(1 << 0)
+#define TURN_BUZZER_OFF PORTC |= (1 << 0)
+
 const uint8_t EEMEM PS_MAIN[] = {
     0x20, 0x00, 0x00, 0x10, 0x00, 0x00, 0x10, 0x00, 0x00,
     0x10, 0x08, 0x00, 0x00, 0x00, 0x00, 0x40, 0x20, 0x00,
@@ -84,11 +90,10 @@ int main(void){
     init_RTC();
     sei();
     
-    
     DDRC = 0x01;
     DDRD = 0x7F & ~0x03; //set mux outs, dont interrupt S1 and S2
     
-    uint8_t flags = 0x00; //first bit stands for alarm, second for buzzing while mins == secs == 00, third exit
+    uint8_t flags = 0x00; //first bit stands for alarm, second for buzzing while mins == secs == 00, third exit, fourth is set if buzzer enabled
     
     
     /*date*/
@@ -109,6 +114,9 @@ int main(void){
     uint8_t pc_buzz = 0, i_buzz = 0;
     uint16_t tim_buzz = 0;
     char buz_out, buz_cond = 0;
+
+    uint16_t tim_hour_buzz = 0;
+    uint8_t hour_buzz_state = 1;
     /*-------- buzzer vars end ----------------*/
     
     
@@ -130,7 +138,7 @@ int main(void){
 
     
     /*multiplexer vars start------------------*/
-    uint8_t i_mux = 0;
+    uint8_t i_mux = 0, mux_state = 1;
     /*multiplexer vars end---------------------*/
 
     controls_init(&PORTD, 1, &PORTD, 0); //init controls
@@ -140,6 +148,7 @@ int main(void){
     
 
     send_set(&data);
+    flags |= BUZZ_ENABLED;
 
     while(1){
         update_controls(); //update controls status
@@ -178,9 +187,9 @@ int main(void){
         if(main_out & 0x01) { if(--main_iter < 0) main_iter = 6; }
         if(main_out & 0x02) { if(++main_iter > 6) main_iter = 0; }
         if(main_out & 0x04) { tim_main = 30; }
-        if(main_out & 0x08) { tim_main = 2000; }
-        if(main_out & 0x10) { tim_main = 5000; }
-        if(main_out & 0x20) { tim_main = 20000; }
+        if(main_out & 0x08) { tim_main = 4000; }
+        if(main_out & 0x10) { tim_main = 10000; }
+        if(main_out & 0x20) { tim_main = 40000; }
         if(main_out & 0x40) { main_iter = 0; }
         /*---------------------main graph end----------------------------*/
 
@@ -199,10 +208,10 @@ int main(void){
             matrix_date.date.month = bcd_to_dec(date_buff[5]);
             matrix_date.date.year = bcd_to_dec(date_buff[6]);
             if(matrix_date.time.mins == 0 && matrix_date.time.seconds == 0){
-                flags |= (1 << 1);
+                flags |= NEW_HOUR;
             }
             else{
-                flags &= ~(1 << 1);
+                flags &= ~NEW_HOUR;
             }
             date_tim = 2000;
             date_state = 3;
@@ -218,7 +227,7 @@ int main(void){
 
 
 
-        /*-------------------buzzer graph start--------------------------*/
+        /*-------------------buzzer graphs start--------------------------*/
         buz_out = eeprom_read_byte(&PS_buzz[pc_buzz]); //get output setup            
         switch(eeprom_read_byte(&PW_buzz[pc_buzz])){ //check condition
             case 0: buz_cond = 0; break;
@@ -235,8 +244,8 @@ int main(void){
             pc_buzz = eeprom_read_byte(&PA_buzz[pc_buzz]);
         }
 
-        if(buz_out & 0x80) { PORTC = 0x00; }  //turn buzzer on
-        else { PORTC = 0x01; } //turn buzzer off
+        if(buz_out & 0x80) { TURN_BUZZER_ON; }  
+        else if(hour_buzz_state == 5 || (flags & ALARM_MASK && !(buz_out & 0x80))) { TURN_BUZZER_OFF; } 
         if(buz_out & 0x40) { tim_buzz = T1_BUZZ; } //set timers
         if(buz_out & 0x20) { tim_buzz = T2_BUZZ; }
         if(buz_out & 0x10) { tim_buzz = 4 * T1_BUZZ; }
@@ -244,7 +253,34 @@ int main(void){
         if(buz_out & 0x04) { i_buzz = 10; } //set iterators
         if(buz_out & 0x02) { i_buzz = 5; } //decrease iterator
         if(buz_out & 0x01) { --i_buzz; }
-        /*---------------------buzzer graph end-------------------------*/
+
+        switch(hour_buzz_state){
+            case 1:
+            if(!(flags & ALARM_MASK) && flags & BUZZ_ENABLED && flags & NEW_HOUR){ 
+                tim_hour_buzz = 500; TURN_BUZZER_ON; hour_buzz_state = 2; 
+            } else hour_buzz_state = 5;
+            flags &= ~NEW_HOUR;
+            break;
+            case 2:
+            if(!tim_hour_buzz){
+                tim_hour_buzz = 400; TURN_BUZZER_OFF; hour_buzz_state = 3; 
+            }
+            break;
+            case 3: 
+            if(!tim_hour_buzz){
+                tim_hour_buzz = 500; TURN_BUZZER_ON; hour_buzz_state = 4; 
+            }
+            break;
+            case 4:
+            if(!tim_hour_buzz){
+                TURN_BUZZER_OFF; hour_buzz_state = 5; 
+            }
+            break;
+            case 5:
+            if(flags & NEW_HOUR) hour_buzz_state = 1;
+            break;
+        }
+        /*---------------------buzzer graphs end-------------------------*/
         
         
         /*-------------------controls graph start--------------------------*/
@@ -321,23 +357,31 @@ int main(void){
         /*---------------------content to be displayed--------------------*/
 
         /*----------------------------mux start---------------------------*/
-        count = 0;
-        PORTD |= (1 << PD5); //disable mux
-        PORTD |= (1 << PD6); 
-        PORTD &= ~(7 << 2); //zero out mux inputs
-        i_mux = i_mux > 6? 0 : i_mux + 1;
-        prepare_set(fourth, third, second, first, i_mux, &data, dot);
-        send_set(&data);
-        //send bytes to registers here
-        PORTD |= (i_mux << 2);
-        PORTD &= ~(1 << PD5); //enable mux
-        PORTD &= ~(1 << PD6);
+            PORTD |= (1 << PD5); //disable mux
+            PORTD |= (1 << PD6); 
+            PORTD = (PORTD & ~(7 << 2)) | (i_mux << 2); //set mux output
+            prepare_set(fourth, third, second, first, i_mux, &data, dot);
+            send_set(&data);
+            //send bytes to registers here
+            PORTD &= ~(1 << PD6);
+            PORTD &= ~(1 << PD5); //enable mux
+            
+            switch(mux_state){
+                case 1:
+                    if(++i_mux > 6) i_mux = 0;
+                    mux_state = 2;
+                break;
+                case 2:
+                    mux_state = 1;
+                break;
+            }
         /*----------------------------mux end-----------------------------*/
 
         if(tim_buzz) --tim_buzz; //decrease buzzer timer if > 0 
         if(tim_controls) --tim_controls;
         if(tim_main) --tim_main;
         if(date_tim) --date_tim;
+        if(tim_hour_buzz) --tim_hour_buzz;
         while(!cycle)continue;
         cycle = 0;
     }
