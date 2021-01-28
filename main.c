@@ -48,20 +48,6 @@ const uint8_t EEMEM PA_MAIN[] = {
     44, 0, 16
 };
 
-const uint8_t EEMEM PS_controls[] = {
-    0x00, 0x00, 0x02,0x00, 0x00, 0x00, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00,
-    0x00, 0x00, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-};
-
-const uint8_t EEMEM PW_controls[] = {
-    2, 3, 1, 3, 4, 5, 1, 3, 1, 3, 4, 5, 0, 1, 7, 4,
-    5, 1, 7, 1, 7, 4, 5, 0, 6, 0
-};
-
-const uint8_t EEMEM PA_controls[] = {
-    13, 0, 0, 0, 24, 3, 0, 0, 0, 0, 24, 9, 6, 0, 0, 24, 14, 0, 0, 0, 0, 24, 20, 17, 24, 0
-};
-
 const uint8_t EEMEM PS_buzz[] = {
     0x00, 0xC4, 0xC0, 0x80, 0x80, 0x40, 0x00, 0x00, 0xC0, 0x80, 0x80, 0x11, 0x00, 0x00,
     0x00, 0xA2, 0xA0, 0x80, 0x80, 0x20, 0x00, 0x00, 0xA0, 0x80, 0x80, 0x20, 0x00, 0x00,
@@ -121,10 +107,7 @@ int main(void){
     
     
     /*---------------------controls------------*/
-    char x = 0;
-    uint8_t S1, S2, pc_controls = 0; 
-    char control_out, control_cond = 0, lower = 0, upper = 100;
-    uint16_t tim_controls = 0;
+    uint8_t S1, S2;
     /*----------controls end-------------------*/
     
     /*--------------main graph vars start------*/
@@ -329,29 +312,7 @@ int main(void){
         if(pc_main == 36) tim_main = 30000;
         if(pc_main >= 37 && pc_main <= 38){
             if(main_iter == 6) { pc_main = 0; } //exit
-            /*-------------------controls graph start--------------------------*/
-        control_out = eeprom_read_byte(&PS_controls[pc_controls]); //get output setup            
-        switch(eeprom_read_byte(&PW_controls[pc_controls])){ //check condition
-            case 0: control_cond = 0; break;
-            case 1: control_cond = 1; break;
-            case 2: control_cond = !S2; break;
-            case 3: control_cond = S1; break;
-            case 4: control_cond = !S1 || !S2; break;
-            case 5: control_cond = !tim_controls; break;
-            case 7: control_cond = S2; break;
-            case 6: control_cond = !S1 && !S2; break;
-        }
-        if(control_cond){ //if condition is met, increase pc and go to the next instruction
-            ++pc_controls;
-        }
-        else{
-            pc_controls = eeprom_read_byte(&PA_controls[pc_controls]); //else jump
-        }
-        if(control_out & 0x08) { if(++x > upper) x = lower; } //set "output"
-        if(control_out & 0x04) { if(--x < lower) x = upper; }
-        if(control_out & 0x02) { tim_controls = T1_CONTROLS; } //set timers
-        if(control_out & 0x01) { tim_controls = T2_CONTROLS; }
-        /*---------------------controls graph end-------------------------*/
+
             switch(main_iter){
                 case 0: //time
                 break;
@@ -413,72 +374,7 @@ int main(void){
                 break;
 
                 case 3: //snoze
-                upper = 60; lower = 1;
-                x = snoze_time_coef;
-                switch(side_iter){
-                        case 0: fourth = 27; third = 27; 
-                        second = side_state == 9? 27 : x / 10; 
-                        first = side_state == 9? 27 : x % 10; 
-                        break;
-                        case 1: fourth = 13; third = 22; second = 14; first = 20; break;
-                    }
-                    /*-----------------------control graph-----------------------*/
-                    switch(side_state){
-                        case 1:
-                        if(S3){ tim_main = 30000; side_tim = 60; side_state = 2; }
-                        else if(S1) { tim_main = 30000; side_tim = 60; side_state = 4; }
-                        else if(S2) { tim_main = 30000; side_tim = 60; side_state = 6; }
-                        break;
-                        case 2:
-                        if(side_tim && !S3) { tim_main = 30000; side_state = 1; }
-                        else if(!side_tim && S3) {tim_main = 30000; side_state = 3; }
-                        break;
-                        case 3:
-                        if(!S3) { 
-                            switch(side_iter){
-                                case 0: 
-                                tim_main = 30000; side_state = 8;
-                                break;
-                                case 1:
-                                side_state = 1;
-                                flags |= EXIT_CONDITION;
-                                break;
-                            } 
-                        }
-                        break;
-                        case 4:
-                        if(side_tim && !S1) { tim_main = 30000; side_state = 1; }
-                        else if(!side_tim && S1) { tim_main = 30000; side_state = 5; if(++side_iter > 1) side_iter = 0; }
-                        break;
-                        case 5:
-                        if(!S1) { tim_main = 30000; side_state = 1; }
-                        break;
-                        case 6:
-                        if(side_tim && !S2) { tim_main = 30000; side_state = 1; }
-                        else if(!side_tim && S2) { tim_main = 30000; side_state = 7; if(--side_iter < 0) side_iter = 1; }
-                        break;
-                        case 7:
-                        if(!S2) { tim_main = 30000; side_state = 1; side_tim = 1000; }
-                        break;
-                        case 8:
-                        if(S3) { side_tim = 60; side_state = 10; tim_main = 30000; }
-                        if(!side_tim) { side_tim = 1000; side_state = 9; tim_main = 30000; }
-                        snoze_time_coef = x;
-                        break;
-                        case 9:
-                        if(!side_tim) { side_tim = 1000; side_state = 8; tim_main = 30000; }
-                        if(S3) { side_tim = 60; side_state = 10; tim_main = 30000; }
-                        snoze_time_coef = x;
-                        break;
-                        case 10:
-                        if(side_tim && !S3) { tim_main = 30000; side_state = 8; }
-                        else if(!side_tim && S3) {tim_main = 30000; side_state = 11; }
-                        break;
-                        case 11:
-                        if(!S3) { side_state = 1; }
-                        break;
-                    }
-                    /*-----------------------control graph-----------------------*/
+                
                 break;
 
                 case 4: //single alm set
@@ -514,7 +410,6 @@ int main(void){
         /*----------------------------mux end-----------------------------*/
 
         if(tim_buzz) --tim_buzz; //decrease buzzer timer if > 0 
-        if(tim_controls) --tim_controls;
         if(tim_main) --tim_main;
         if(date_tim) --date_tim;
         if(tim_hour_buzz) --tim_hour_buzz;
