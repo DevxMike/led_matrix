@@ -16,4 +16,7 @@ inline uint8_t dec_to_bcd(uint8_t dec){
     return ((dec/10) << 4) | (dec % 10);
 }
 uint8_t day_of_week(uint16_t y, uint8_t m, uint8_t d);
+inline uint8_t is_leap(uint16_t year) {
+    return (((year % 4 == 0) && (year % 100 != 0)) || (year % 400 == 0));
+}
 #endif

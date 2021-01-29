@@ -2,6 +2,11 @@
 #define data_structs_h
 #include <avr/io.h>
 
+enum Month{
+    january = 1, february, march, april, may, 
+    june, july, august, september, october, november, december 
+};
+
 typedef struct{
     uint8_t hours : 5;
     uint8_t mins : 6;

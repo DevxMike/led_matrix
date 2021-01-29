@@ -530,8 +530,27 @@ int main(void){
                             else if(!inc_dec_tim && S1) {
                                 inc_state = 3; inc_dec_tim = T2_CONTROLS;
                                 switch(side_iter) {
-                                    //case 0: if(++matrix_date.time.hours > 23) matrix_date.time.hours = 0; break; //to do
-                                    case 1: if(++matrix_date.date.month > 12) matrix_date.time.mins = 1; break;
+                                    case 0: 
+                                    switch(matrix_date.date.month){
+                                        case 1: case 3: case 5: case 7: case 8: case 10: case 12:
+                                        //if(++matrix_date.date.day_1 > 31) matrix_date.date.day_1 = 1;
+                                        if(matrix_date.date.day_1 == 31) matrix_date.date.day_1 = 1;
+                                        else ++matrix_date.date.day_1; //stupid but works like the previous scope didnt
+                                        break;
+                                        case 4: case 6: case 9: case 11:
+                                        if(++matrix_date.date.day_1 > 30) matrix_date.date.day_1 = 1;
+                                        break;
+                                        case 2:
+                                        if(is_leap(2000 + matrix_date.date.year)){
+                                            if(++matrix_date.date.day_1 > 29) matrix_date.date.day_1 = 1; 
+                                        }
+                                        else{
+                                            if(++matrix_date.date.day_1 > 28) matrix_date.date.day_1 = 1; 
+                                        }
+                                        break;
+                                    }
+                                    break;
+                                    case 1: if(++matrix_date.date.month > 12) matrix_date.date.month = 1; break;
                                     case 2: if(++matrix_date.date.year > 99) matrix_date.date.year = 0; break;
                                 }
                                 date_buff[3] = day_of_week(
@@ -552,9 +571,26 @@ int main(void){
                             else if(!inc_dec_tim && S2) {
                                 inc_state = 5; inc_dec_tim = T2_CONTROLS;
                                 switch(side_iter) {
-                                    //case 0: if(--matrix_date.time.hours > 23) matrix_date.time.hours = 0; break; //to do
-                                    case 1: if(--matrix_date.date.month > 12) matrix_date.time.mins = 1; break;
-                                    case 2: if(--matrix_date.date.year > 99) matrix_date.date.year = 0; break;
+                                    case 0: 
+                                    switch(matrix_date.date.month){
+                                        case 1: case 3: case 5: case 7: case 8: case 10: case 12:
+                                        if(--matrix_date.date.day_1 == 0) matrix_date.date.day_1 = 31;
+                                        break;
+                                        case 4: case 6: case 9: case 11:
+                                        if(--matrix_date.date.day_1 == 0) matrix_date.date.day_1 = 30;
+                                        break;
+                                        case 2:
+                                        if(is_leap(2000 + matrix_date.date.year)){
+                                            if(--matrix_date.date.day_1 == 0) matrix_date.date.day_1 = 29; 
+                                        }
+                                        else{
+                                            if(--matrix_date.date.day_1 == 0) matrix_date.date.day_1 = 28; 
+                                        }
+                                        break;
+                                    }
+                                    break;
+                                    case 1: if(--matrix_date.date.month == 0) matrix_date.date.month = 12; break;
+                                    case 2: if(--matrix_date.date.year > 99) matrix_date.date.year = 99; break;
                                 }
                                 date_buff[3] = day_of_week(
                                     2000 + matrix_date.date.year, matrix_date.date.month, matrix_date.date.day_1
