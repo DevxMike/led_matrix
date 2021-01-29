@@ -511,7 +511,7 @@ int main(void){
                         if(!S3) { tim_main = 30000; side_state = 2; flags &= ~SETTINGS_ON; }
                         break;
                     }
-                    /*switch(inc_state){
+                    switch(inc_state){
                         case 1:
                         if(side_state == 9){
                             inc_state = 2; tim_main = 30000;
@@ -530,12 +530,18 @@ int main(void){
                             else if(!inc_dec_tim && S1) {
                                 inc_state = 3; inc_dec_tim = T2_CONTROLS;
                                 switch(side_iter) {
-                                    case 0: if(++matrix_date.time.hours > 23) matrix_date.time.hours = 0; break;
-                                    case 1: if(++matrix_date.time.mins > 59) matrix_date.time.mins = 0; break;
+                                    //case 0: if(++matrix_date.time.hours > 23) matrix_date.time.hours = 0; break; //to do
+                                    case 1: if(++matrix_date.date.month > 12) matrix_date.time.mins = 1; break;
+                                    case 2: if(++matrix_date.date.year > 99) matrix_date.date.year = 0; break;
                                 }
-                                date_buff[1] = dec_to_bcd(matrix_date.time.mins); date_buff[2] = dec_to_bcd(matrix_date.time.hours);
+                                date_buff[3] = day_of_week(
+                                    2000 + matrix_date.date.year, matrix_date.date.month, matrix_date.date.day_1
+                                ) + 1;
+                                date_buff[4] = dec_to_bcd(matrix_date.date.day_1); 
+                                date_buff[5] = dec_to_bcd(matrix_date.date.month);
+                                date_buff[6] = dec_to_bcd(matrix_date.date.year); 
                                 tim_main = 30000;
-                                write_buff(SLAVE, 0x01, 2, &date_buff[1]);
+                                write_buff(SLAVE, 0x03, 4, &date_buff[3]);
                             }
                         }
                         else inc_state = 1;
@@ -546,17 +552,23 @@ int main(void){
                             else if(!inc_dec_tim && S2) {
                                 inc_state = 5; inc_dec_tim = T2_CONTROLS;
                                 switch(side_iter) {
-                                    case 0: if(--matrix_date.time.hours > 23) matrix_date.time.hours = 23; break;
-                                    case 1: if(--matrix_date.time.mins > 59) matrix_date.time.mins = 59; break;
+                                    //case 0: if(--matrix_date.time.hours > 23) matrix_date.time.hours = 0; break; //to do
+                                    case 1: if(--matrix_date.date.month > 12) matrix_date.time.mins = 1; break;
+                                    case 2: if(--matrix_date.date.year > 99) matrix_date.date.year = 0; break;
                                 }
-                                date_buff[1] = dec_to_bcd(matrix_date.time.mins); date_buff[2] = dec_to_bcd(matrix_date.time.hours);
+                                date_buff[3] = day_of_week(
+                                    2000 + matrix_date.date.year, matrix_date.date.month, matrix_date.date.day_1
+                                ) + 1;
+                                date_buff[4] = dec_to_bcd(matrix_date.date.day_1); 
+                                date_buff[5] = dec_to_bcd(matrix_date.date.month);
+                                date_buff[6] = dec_to_bcd(matrix_date.date.year); 
                                 tim_main = 30000;
-                                write_buff(SLAVE, 0x01, 2, &date_buff[1]);
+                                write_buff(SLAVE, 0x03, 4, &date_buff[3]);
                             }
                         }
                         else inc_state = 1;
                         break;
-                    }*/
+                    }
                     /*-----------------------control graph-----------------------*/
                 break;
                 
