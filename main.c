@@ -331,44 +331,59 @@ int main(void){
                         break;
                         case 2: fourth = 13; third = 22; second = 14; first = 20; break;
                     }
-
+                    /*-----------------------control graph-----------------------*/
                     switch(side_state){
                         case 1:
-                        if(!side_tim) { tim_main = 30000; side_tim = 1000; side_state = 2; }
+                        if(!side_tim) { side_tim = 1000; side_state = 2; }
                         if(S1) { tim_main = 30000; side_tim = 60; side_state = 3; }
                         else if(S2) { tim_main = 30000; side_tim = 60; side_state = 6; }
                         else if(S3) { tim_main = 30000; side_tim = 60; side_state = 7; }
                         break;
                         case 2:
-                        if(!side_tim) { tim_main = 30000; side_tim = 1000; side_state = 1; }
+                        if(!side_tim) { side_tim = 1000; side_state = 1; }
                         if(S1) { tim_main = 30000; side_tim = 60; side_state = 3; }
                         else if(S2) { tim_main = 30000; side_tim = 60; side_state = 6; }
                         else if(S3) { tim_main = 30000; side_tim = 60; side_state = 7; }
                         break;
                         case 3:
-                        if(side_tim && !S1) { tim_main = 30000; side_tim = 1000; side_state = 1; }
+                        if(side_tim && !S1) { tim_main = 30000; side_tim = 1000; side_state = 2; }
                         else if(!side_tim && S1) { tim_main = 30000; side_state = 4;}
                         break;
                         case 4:
-                        if(!S1) { tim_main = 30000; if(++side_iter > 2) side_iter = 0; side_tim = 1000; side_state = 1; }
+                        if(!S1) { tim_main = 30000; if(++side_iter > 2) side_iter = 0; side_tim = 1000; side_state = 2; }
                         break;
                         case 5:
-                        if(side_tim && !S2) { tim_main = 30000; side_tim = 1000; side_state = 1; }
+                        if(side_tim && !S2) { tim_main = 30000; side_tim = 1000; side_state = 2; }
                         else if(!side_tim && S2) { tim_main = 30000; side_state = 6;}
                         break;
                         case 6:
-                        if(!S2) { tim_main = 30000; if(--side_iter < 0) side_iter = 2; side_tim = 1000; side_state = 1; }
+                        if(!S2) { tim_main = 30000; if(--side_iter < 0) side_iter = 2; side_tim = 1000; side_state = 2; }
                         break;
                         case 7:
-                        if(side_tim && !S3) { tim_main = 30000; side_tim = 1000; side_state = 1; }
+                        if(side_tim && !S3) { tim_main = 30000; side_tim = 1000; side_state = 2; }
                         else if(!side_tim && S3) { tim_main = 30000; side_state = 8; }
                         break;
                         case 8:
                         if(!S3) { tim_main = 30000; side_state = 9; }
                         break;
                         case 9:
+                            switch(side_iter){
+                                case 0: case 1: 
+                                if(S3) { tim_main = 30000; side_tim = 60; side_state = 10; }
+                                break;
+                                case 2: flags |= EXIT_CONDITION; break;
+                            }
+                        break;
+                        case 10:
+                        if(side_tim && !S3) { tim_main = 30000; side_state = 9; }
+                        else if(!side_tim && S3) { tim_main = 30000; side_state = 11; }
+                        break;
+                        case 11:
+                        if(!S3) { tim_main = 30000; side_state = 2; }
                         break;
                     }
+                    /*-----------------------control graph-----------------------*/
+
                 break;
 
                 case 1: //date
