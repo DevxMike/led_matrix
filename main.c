@@ -13,13 +13,14 @@
 #define T1_BUZZ 240
 #define T2_BUZZ 180
 #define T1_CONTROLS 200
-#define T2_CONTROLS 510
+#define T2_CONTROLS 400
 #define ALARM_MASK 0x01
 #define NEW_HOUR 0x02
 #define EXIT_CONDITION 0x04
 #define BUZZ_ENABLED 0x08
 #define TURN_BUZZER_ON PORTC &= ~(1 << 0)
 #define TURN_BUZZER_OFF PORTC |= (1 << 0)
+#define SETTINGS_ON 0x10
 
 const uint8_t EEMEM PS_MAIN[] = {
     0x20, 0x00, 0x00, 0x10, 0x00, 0x00, 0x10, 0x00, 0x00,
@@ -80,6 +81,7 @@ int main(void){
     DDRD = 0x7F & ~0x03; //set mux outs, dont interrupt S1 and S2
     
     uint8_t flags = 0x00; //first bit stands for alarm, second for buzzing while mins == secs == 00, third exit, fourth is set if buzzer enabled
+    //fifth for check wheter data or time is being set
     
     
     /*date*/
@@ -180,22 +182,24 @@ int main(void){
         /*---------------------date update start-------------------------*/
         switch(date_state){
             case 1:
-            read_buff(SLAVE, 0x00, 7, date_buff);
+            if(!(flags & SETTINGS_ON)) read_buff(SLAVE, 0x00, 7, date_buff);
             date_state = 2;
             break;
             case 2:
-            matrix_date.time.seconds = bcd_to_dec(date_buff[0]);
-            matrix_date.time.mins = bcd_to_dec(date_buff[1]);
-            matrix_date.time.hours = bcd_to_dec(date_buff[2]);
-            matrix_date.date.day_2 = bcd_to_dec(date_buff[3]);
-            matrix_date.date.day_1 = bcd_to_dec(date_buff[4]);
-            matrix_date.date.month = bcd_to_dec(date_buff[5]);
-            matrix_date.date.year = bcd_to_dec(date_buff[6]);
-            if(matrix_date.time.mins == 0 && matrix_date.time.seconds == 0){
-                flags |= NEW_HOUR;
-            }
-            else{
-                flags &= ~NEW_HOUR;
+            if(!(flags & SETTINGS_ON)){
+                matrix_date.time.seconds = bcd_to_dec(date_buff[0]);
+                matrix_date.time.mins = bcd_to_dec(date_buff[1]);
+                matrix_date.time.hours = bcd_to_dec(date_buff[2]);
+                matrix_date.date.day_2 = bcd_to_dec(date_buff[3]);
+                matrix_date.date.day_1 = bcd_to_dec(date_buff[4]);
+                matrix_date.date.month = bcd_to_dec(date_buff[5]);
+                matrix_date.date.year = bcd_to_dec(date_buff[6]);
+                if(matrix_date.time.mins == 0 && matrix_date.time.seconds == 0){
+                    flags |= NEW_HOUR;
+                }
+                else{
+                    flags &= ~NEW_HOUR;
+                }
             }
             date_tim = 2000;
             date_state = 3;
@@ -316,6 +320,7 @@ int main(void){
 
             switch(main_iter){
                 case 0: //time
+                    /*-----------------------control graph-----------------------*/
                     switch(side_iter){
                         case 0: 
                         fourth = side_state == 1 || side_state == 9? matrix_date.time.hours / 10 : 27;
@@ -331,7 +336,6 @@ int main(void){
                         break;
                         case 2: fourth = 13; third = 22; second = 14; first = 20; break;
                     }
-                    /*-----------------------control graph-----------------------*/
                     switch(side_state){
                         case 1:
                         if(!side_tim) { side_tim = 1000; side_state = 2; }
@@ -364,14 +368,14 @@ int main(void){
                         else if(!side_tim && S3) { tim_main = 30000; side_state = 8; }
                         break;
                         case 8:
-                        if(!S3) { tim_main = 30000; side_state = 9; }
+                        if(!S3) { tim_main = 30000; side_state = 9; flags |= SETTINGS_ON; }
                         break;
                         case 9:
                             switch(side_iter){
                                 case 0: case 1: 
                                 if(S3) { tim_main = 30000; side_tim = 60; side_state = 10; }
                                 break;
-                                case 2: flags |= EXIT_CONDITION; break;
+                                case 2: flags |= EXIT_CONDITION; flags &= ~SETTINGS_ON; break;
                             }
                         break;
                         case 10:
@@ -379,23 +383,68 @@ int main(void){
                         else if(!side_tim && S3) { tim_main = 30000; side_state = 11; }
                         break;
                         case 11:
-                        if(!S3) { tim_main = 30000; side_state = 2; }
+                        if(!S3) { tim_main = 30000; side_state = 2; flags &= ~SETTINGS_ON; }
+                        break;
+                    }
+                    switch(inc_state){
+                        case 1:
+                        if(side_state == 9){
+                            inc_state = 2; tim_main = 30000;
+                        }
+                        break;
+                        case 2:
+                        if(side_state == 9){
+                            if(S1) { inc_dec_tim = T1_CONTROLS; inc_state = 3; tim_main = 30000; }
+                            else if(S2) { inc_dec_tim = T1_CONTROLS; inc_state = 5; tim_main = 30000; }
+                        }
+                        else inc_state = 1;
+                        break;
+                        case 3: 
+                        if(side_state == 9){
+                            if(inc_dec_tim && !S1) { inc_state = 1; tim_main = 30000; }
+                            else if(!inc_dec_tim && S1) {
+                                inc_state = 3; inc_dec_tim = T2_CONTROLS;
+                                switch(side_iter) {
+                                    case 0: if(++matrix_date.time.hours > 23) matrix_date.time.hours = 0; break;
+                                    case 1: if(++matrix_date.time.mins > 59) matrix_date.time.mins = 0; break;
+                                }
+                                date_buff[1] = dec_to_bcd(matrix_date.time.mins); date_buff[2] = dec_to_bcd(matrix_date.time.hours);
+                                tim_main = 30000;
+                                write_buff(SLAVE, 0x01, 2, &date_buff[1]);
+                            }
+                        }
+                        else inc_state = 1;
+                        break;
+                        case 5: 
+                        if(side_state == 9){
+                            if(inc_dec_tim && !S2)  { inc_state = 1; tim_main = 30000; }
+                            else if(!inc_dec_tim && S2) {
+                                inc_state = 5; inc_dec_tim = T2_CONTROLS;
+                                switch(side_iter) {
+                                    case 0: if(--matrix_date.time.hours > 23) matrix_date.time.hours = 23; break;
+                                    case 1: if(--matrix_date.time.mins > 59) matrix_date.time.mins = 59; break;
+                                }
+                                date_buff[1] = dec_to_bcd(matrix_date.time.mins); date_buff[2] = dec_to_bcd(matrix_date.time.hours);
+                                tim_main = 30000;
+                                write_buff(SLAVE, 0x01, 2, &date_buff[1]);
+                            }
+                        }
+                        else inc_state = 1;
                         break;
                     }
                     /*-----------------------control graph-----------------------*/
-
                 break;
 
                 case 1: //date
                 break;
                 
                 case 2: //buzz
+                    /*-----------------------control graph-----------------------*/
                     switch(side_iter){
                         case 0: fourth = 26; third = 28; second = 28; first = 27; break;
                         case 1: fourth = 26; third = 17; second = 27; first = 27; break;
                         case 2: fourth = 13; third = 22; second = 14; first = 20; break;
                     }
-                    /*-----------------------control graph-----------------------*/
                     switch(side_state){
                         case 1:
                         if(S3){ tim_main = 30000; side_tim = 60; side_state = 2; }
@@ -443,6 +492,7 @@ int main(void){
                 break;
 
                 case 3: //snoze
+                    /*-----------------------control graph-----------------------*/
                     switch(side_iter){
                         case 0: 
                         fourth = side_state != 8? 27 : 19; 
@@ -452,7 +502,6 @@ int main(void){
                         break;
                         case 1: fourth = 13; third = 22; second = 14; first = 20; break;
                     }
-                    /*-----------------------control graph-----------------------*/
                     switch(side_state){
                         case 1:
                         if(S3){ tim_main = 30000; side_tim = 60; side_state = 2; }
