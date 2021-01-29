@@ -118,7 +118,7 @@ int main(void){
     /*--------------main graph vars end--------*/
 
     /*--------------alm vars start-------------*/
-    uint8_t snoze_time_coef = 1, snoze_inc_state = 1;
+    uint8_t snoze_time_coef = 1, inc_state = 1;
     //static alarm_t alarms[0];
     /*--------------alm vars end---------------*/
     
@@ -298,6 +298,7 @@ int main(void){
             flags &= ~EXIT_CONDITION; //zero-out exit condition
             side_iter = 0;
             side_state = 1;
+            inc_state = 1;
             dot = none;
             switch(main_iter){
                 case 0: fourth = 20; third = 14; second = 16; first = 13; break;
@@ -315,6 +316,59 @@ int main(void){
 
             switch(main_iter){
                 case 0: //time
+                    switch(side_iter){
+                        case 0: 
+                        fourth = side_state == 1 || side_state == 9? matrix_date.time.hours / 10 : 27;
+                        third = side_state == 1 || side_state == 9? matrix_date.time.hours % 10 : 27;
+                        second = side_state == 9? 25 : matrix_date.time.mins / 10;
+                        first = side_state == 9? 25 : matrix_date.time.mins % 10;
+                        break;
+                        case 1:
+                        fourth = side_state == 9? 16 : matrix_date.time.hours / 10;
+                        third = side_state == 9? 16 : matrix_date.time.hours % 10;
+                        second = side_state == 1 || side_state == 9? matrix_date.time.mins / 10 : 27;
+                        first = side_state == 1 || side_state == 9? matrix_date.time.mins % 10 : 27;
+                        break;
+                        case 2: fourth = 13; third = 22; second = 14; first = 20; break;
+                    }
+
+                    switch(side_state){
+                        case 1:
+                        if(!side_tim) { tim_main = 30000; side_tim = 1000; side_state = 2; }
+                        if(S1) { tim_main = 30000; side_tim = 60; side_state = 3; }
+                        else if(S2) { tim_main = 30000; side_tim = 60; side_state = 6; }
+                        else if(S3) { tim_main = 30000; side_tim = 60; side_state = 7; }
+                        break;
+                        case 2:
+                        if(!side_tim) { tim_main = 30000; side_tim = 1000; side_state = 1; }
+                        if(S1) { tim_main = 30000; side_tim = 60; side_state = 3; }
+                        else if(S2) { tim_main = 30000; side_tim = 60; side_state = 6; }
+                        else if(S3) { tim_main = 30000; side_tim = 60; side_state = 7; }
+                        break;
+                        case 3:
+                        if(side_tim && !S1) { tim_main = 30000; side_tim = 1000; side_state = 1; }
+                        else if(!side_tim && S1) { tim_main = 30000; side_state = 4;}
+                        break;
+                        case 4:
+                        if(!S1) { tim_main = 30000; if(++side_iter > 2) side_iter = 0; side_tim = 1000; side_state = 1; }
+                        break;
+                        case 5:
+                        if(side_tim && !S2) { tim_main = 30000; side_tim = 1000; side_state = 1; }
+                        else if(!side_tim && S2) { tim_main = 30000; side_state = 6;}
+                        break;
+                        case 6:
+                        if(!S2) { tim_main = 30000; if(--side_iter < 0) side_iter = 2; side_tim = 1000; side_state = 1; }
+                        break;
+                        case 7:
+                        if(side_tim && !S3) { tim_main = 30000; side_tim = 1000; side_state = 1; }
+                        else if(!side_tim && S3) { tim_main = 30000; side_state = 8; }
+                        break;
+                        case 8:
+                        if(!S3) { tim_main = 30000; side_state = 9; }
+                        break;
+                        case 9:
+                        break;
+                    }
                 break;
 
                 case 1: //date
@@ -432,58 +486,58 @@ int main(void){
                         if(!S3) { tim_main = 30000; side_state = 1; }
                         break;
                     }
-                    switch(snoze_inc_state){
+                    switch(inc_state){
                         case 1:
                         if(side_state >= 8 && side_state <= 9){
-                            snoze_inc_state = 2;
+                            inc_state = 2;
                         }
                         break;
                         case 2:
                         if(side_state >= 8 && side_state <= 9){
-                            if(S1) { inc_dec_tim = T1_CONTROLS; snoze_inc_state = 3; }
-                            else if(S2) { inc_dec_tim = T1_CONTROLS; snoze_inc_state = 5; }
+                            if(S1) { inc_dec_tim = T1_CONTROLS; inc_state = 3; }
+                            else if(S2) { inc_dec_tim = T1_CONTROLS; inc_state = 5; }
                         }
-                        else snoze_inc_state = 1;
+                        else inc_state = 1;
                         break;
                         case 3: 
                         if(side_state >= 8 && side_state <= 9){
-                            if(inc_dec_tim && !S1)  snoze_inc_state = 1;
+                            if(inc_dec_tim && !S1)  inc_state = 1;
                             else if(!inc_dec_tim && S1) {
-                                snoze_inc_state = 4; inc_dec_tim = T2_CONTROLS;
+                                inc_state = 4; inc_dec_tim = T2_CONTROLS;
                                 if(++snoze_time_coef > 60) snoze_time_coef = 1;
                             }
                         }
-                        else snoze_inc_state = 1;
+                        else inc_state = 1;
                         break;
                         case 4:
                         if(side_state >= 8 && side_state <= 9){
-                            if(inc_dec_tim && !S1)  snoze_inc_state = 1;
+                            if(inc_dec_tim && !S1)  inc_state = 1;
                             else if(!inc_dec_tim && S1) {
                                 inc_dec_tim = T2_CONTROLS;
                                 if(++snoze_time_coef > 60) snoze_time_coef = 1;
                             }
                         }
-                        else snoze_inc_state = 1;
+                        else inc_state = 1;
                         break;
                         case 5: 
                         if(side_state >= 8 && side_state <= 9){
-                            if(inc_dec_tim && !S2)  snoze_inc_state = 1;
+                            if(inc_dec_tim && !S2)  inc_state = 1;
                             else if(!inc_dec_tim && S2) {
-                                snoze_inc_state = 6; inc_dec_tim = T2_CONTROLS;
+                                inc_state = 6; inc_dec_tim = T2_CONTROLS;
                                 if(--snoze_time_coef < 1) snoze_time_coef = 60;
                             }
                         }
-                        else snoze_inc_state = 1;
+                        else inc_state = 1;
                         break;
                         case 6:
                         if(side_state >= 8 && side_state <= 9){
-                            if(inc_dec_tim && !S2)  snoze_inc_state = 1;
+                            if(inc_dec_tim && !S2)  inc_state = 1;
                             else if(!inc_dec_tim && S2) {
                                 inc_dec_tim = T2_CONTROLS;
                                 if(--snoze_time_coef < 1) snoze_time_coef = 60;
                             }
                         }
-                        else snoze_inc_state = 1;
+                        else inc_state = 1;
                         break;
                     }
                     /*-----------------------control graph-----------------------*/
