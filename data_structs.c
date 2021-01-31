@@ -10,7 +10,7 @@ void check_alarm(alarm_t* alarms, const time_data_t* time, uint8_t quantity, con
     for(uint8_t i = 0; i < quantity; ++i){
         switch(pt[i].state){
             case 1:
-            tmp = (pt[i].alm_time.hours == time->time.hours) && (pt[i].alm_time.mins == time->time.mins) && (pt[i].flags.days_flags & (1 << time->date.day_2));
+            tmp = (pt[i].alm_time.hours == time->time.hours) && (pt[i].alm_time.mins == time->time.mins) && (pt[i].flags.days_flags & (1 << time->date.day_2)) && !time->time.seconds;
             if((pt[i].flags.other_flags = tmp? 2 : 0)){
                 if(!(flags & ALARM_MASK)) flags |= ALARM_MASK;
                 pt[i].state = 2;
