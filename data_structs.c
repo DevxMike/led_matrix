@@ -7,17 +7,20 @@ void check_alarm(alarm_t* alarms, const time_data_t* time, uint8_t quantity, con
     alarm_t* pt = alarms;
     uint8_t tmp = 0;
 
+    
+
     for(uint8_t i = 0; i < quantity; ++i){
         switch(pt[i].state){
             case 1:
             tmp = (pt[i].alm_time.hours == time->time.hours) && (pt[i].alm_time.mins == time->time.mins) && (pt[i].flags.days_flags & (1 << time->date.day_2)) && !time->time.seconds;
-            if((pt[i].flags.other_flags = tmp? 2 : 0)){
+            if((pt[i].flags.other_flags = tmp? 1 : 0)){
                 if(!(flags & ALARM_MASK)) flags |= ALARM_MASK;
                 pt[i].state = 2;
             } 
             break;
             
             case 2:
+            if(!(flags & ALARM_MASK)) flags |= ALARM_MASK;
             if(okK){
                 pt[i].tim = 60;
                 pt[i].state = 3;
@@ -52,33 +55,32 @@ void check_alarm(alarm_t* alarms, const time_data_t* time, uint8_t quantity, con
                 pt[i].state = 2;
             }
             else if(!pt[i].tim && incK){
-                pt[i].flags.other_flags = 1;
-                pt[i].tim = coef * 2000 * 60; 
+                pt[i].flags.other_flags = 2;
                 pt[i].state = 6;
             }
             break;
 
             case 6:
             if(!incK){
+                pt[i].tim = (uint32_t)coef * 2000 * 60; 
                 pt[i].state = 7;
             }
             break;
 
             case 7:
-            if(!pt[i].tim){
-                pt[i].flags.other_flags = 2;
+            if(pt[i].tim == 0){
+                pt[i].flags.other_flags = 1;
                 pt[i].state = 2;
             }
             break;
         }
-        if(pt[i].tim) --pt[i].tim;
+        if(pt[i].tim > 0) --pt[i].tim;
     }
-    tmp = 0;
     for(uint8_t i = 0; i < quantity; ++i){
-        if(pt[i].flags.other_flags == 2) ++tmp;
+        if(pt[i].flags.other_flags == 1) ++tmp;
     }
     if(!tmp) flags &= ~ALARM_MASK;
-    else if(tmp && !(flags & ALARM_MASK)) flags |= ALARM_MASK;
+    else if(tmp) if(!(flags & ALARM_MASK)) flags |= ALARM_MASK;
 }
 
 void init_alarms(alarm_t* alm, uint8_t q){

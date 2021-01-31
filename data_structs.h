@@ -35,7 +35,7 @@ typedef struct{
 typedef struct{
     time_t alm_time;
     flags_t flags;
-    uint32_t tim : 22; //max 7200000 -> 60 min
+    uint32_t tim; //max 7200000 -> 60 min
     uint8_t state;
 }alarm_t;
 
