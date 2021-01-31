@@ -18,7 +18,7 @@
 #define EXIT_CONDITION 0x04
 #define BUZZ_ENABLED 0x08
 #define TURN_BUZZER_ON PORTC &= ~(1 << 0)
-#define TURN_BUZZER_OFF PORTC |= (1 << 0)
+#define TURN_BUZZER_OFF if(!(PORTC & 1)) PORTC |= (1 << 0)
 #define SETTINGS_ON 0x10
 
 const uint8_t EEMEM PS_MAIN[] = {
@@ -68,10 +68,10 @@ const uint8_t EEMEM PA_buzz[] = {
 volatile uint8_t count = 0;
 volatile uint8_t cycle = 0;
 static uint8_t date_buff[7] = {0};
-static alarm_t alarms;
+static alarm_t alarms[10];
 
 int main(void){
-    init_alarms(&alarms, 10);
+    init_alarms(alarms, 10);
     init_timers();
     init_spi();
     TWBR = 72; //TWI prescaler ~91kHz
@@ -211,7 +211,7 @@ int main(void){
         }
         /*---------------------date update end---------------------------*/
 
-        check_alarm(&alarms, &matrix_date, 10, snoze_time_coef);
+        check_alarm(alarms, &matrix_date, 10, snoze_time_coef);
 
 
         /*-------------------buzzer graphs start--------------------------*/
@@ -777,9 +777,57 @@ int main(void){
                 break;
 
                 case 4: //single alm set
-                break;
-
                 case 5: //alm with repetition set
+                if(side_iter >= 0 && side_iter < 5){
+                    fourth = 10; third = 15; second = 16; first = side_iter + 1;
+                }
+                else{
+                    fourth = 13; third = 22; second = 14; first = 20;
+                }
+                switch(side_state){
+                        case 1:
+                        if(S3){ tim_main = 30000; side_tim = 60; side_state = 2; }
+                        else if(S1) { tim_main = 30000; side_tim = 60; side_state = 4; }
+                        else if(S2) { tim_main = 30000; side_tim = 60; side_state = 6; }
+                        break;
+                        case 2:
+                        if(side_tim && !S3) { tim_main = 30000; side_state = 1; }
+                        else if(!side_tim && S3) {tim_main = 30000; side_state = 3; }
+                        break;
+                        case 3:
+                        if(!S3) { 
+                            if(side_iter >= 0 && side_iter < 5){
+                                tim_main = 30000; side_state = 8;
+                            }
+                            else flags |= EXIT_CONDITION;
+                        }
+                        break;
+                        case 4:
+                        if(side_tim && !S1) { tim_main = 30000; side_state = 1; }
+                        else if(!side_tim && S1) { tim_main = 30000; side_state = 5; if(++side_iter > 5) side_iter = 0; }
+                        break;
+                        case 5:
+                        if(!S1) { tim_main = 30000; side_state = 1; }
+                        break;
+                        case 6:
+                        if(side_tim && !S2) { tim_main = 30000; side_state = 1; }
+                        else if(!side_tim && S2) { tim_main = 30000; side_state = 7; if(--side_iter < 0) side_iter = 5; }
+                        break;
+                        case 7:
+                        if(!S2) { tim_main = 30000; side_state = 1; }
+                        break;
+                        case 8:
+                        if(S1 || S2) { tim_main = 30000; }
+                        if(S3) { side_state = 10; tim_main = 30000; side_tim = 60; }
+                        break;
+                        case 10:
+                        if(side_tim && !S3) { tim_main = 30000; side_state = 8; side_tim = 1000; }
+                        else if(!side_tim && S3) { tim_main = 30000; side_state = 11; }
+                        break;
+                        case 11:
+                        if(!S3) { tim_main = 30000; side_state = 1; }
+                        break;
+                    }
                 break;
             }
             if(!tim_main) { flags |= EXIT_CONDITION; } 
