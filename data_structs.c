@@ -77,19 +77,19 @@ void check_alarm(alarm_t* alarms, const time_data_t* time, uint8_t quantity, con
         if(pt[i].tim > 0) --pt[i].tim;
     }
     for(uint8_t i = 0; i < quantity; ++i){
-        if(pt[i].flags.other_flags == 1) ++tmp;
+        if(pt[i].state == 2) ++tmp;
     }
     if(!tmp) flags &= ~ALARM_MASK;
     else if(tmp) if(!(flags & ALARM_MASK)) flags |= ALARM_MASK;
 }
 
 void init_alarms(alarm_t* alm, uint8_t q){
-        /*------------------------------test--------------------------------*/
+        /*------------------------------test--------------------------------
         alm[0].tim = alm[0].flags.other_flags = alm[0].flags.days_flags = 0xff;
         alm[0].state = 1;
         alm[0].alm_time.hours = 0; alm[0].alm_time.mins = 59;
-        /*------------------------------test--------------------------------*/
-    for(uint8_t i = 1; i < q; ++i){
+        ------------------------------test--------------------------------*/
+    for(uint8_t i = 0; i < q; ++i){
         alm[i].tim = alm[i].flags.other_flags = alm[i].flags.days_flags = 0;
         alm[i].state = 1;
         alm[i].alm_time.hours = alm[i].alm_time.mins = 0;

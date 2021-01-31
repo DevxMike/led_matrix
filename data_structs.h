@@ -29,7 +29,7 @@ typedef struct{
 
 typedef struct{
     uint8_t days_flags; //days of week when alm has to be triggered
-    uint8_t other_flags : 2; //second snoze, first alm trigerred
+    uint8_t other_flags : 2; //second snoze, first alm trigerred, third alarm set
 }flags_t;
 
 typedef struct{
