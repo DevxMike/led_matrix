@@ -1,6 +1,8 @@
 #ifndef data_structs_h
 #define data_structs_h
 #include <avr/io.h>
+#include "controls.h"
+#define ALARM_MASK 0x01
 
 enum Month{
     january = 1, february, march, april, may, 
@@ -26,8 +28,8 @@ typedef struct{
 }time_data_t;
 
 typedef struct{
-    uint8_t days_flags : 7; //days of week when alm has to be triggered
-    uint8_t other_flags : 2; //snoze, alm set
+    uint8_t days_flags; //days of week when alm has to be triggered
+    uint8_t other_flags : 2; //second snoze, first alm trigerred
 }flags_t;
 
 typedef struct{
@@ -37,4 +39,8 @@ typedef struct{
     uint8_t state;
 }alarm_t;
 
+extern uint8_t flags;
+
+void check_alarm(alarm_t*, const time_data_t*, uint8_t, const uint8_t);
+void init_alarms(alarm_t*, uint8_t);
 #endif

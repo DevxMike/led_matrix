@@ -14,7 +14,6 @@
 #define T2_BUZZ 180
 #define T1_CONTROLS 200
 #define T2_CONTROLS 400
-#define ALARM_MASK 0x01
 #define NEW_HOUR 0x02
 #define EXIT_CONDITION 0x04
 #define BUZZ_ENABLED 0x08
@@ -69,8 +68,10 @@ const uint8_t EEMEM PA_buzz[] = {
 volatile uint8_t count = 0;
 volatile uint8_t cycle = 0;
 static uint8_t date_buff[7] = {0};
+static alarm_t alarms;
 
 int main(void){
+    init_alarms(&alarms, 10);
     init_timers();
     init_spi();
     TWBR = 72; //TWI prescaler ~91kHz
@@ -80,9 +81,7 @@ int main(void){
     DDRC = 0x01;
     DDRD = 0x7F & ~0x03; //set mux outs, dont interrupt S1 and S2
     
-    uint8_t flags = 0x00; //first bit stands for alarm, second for buzzing while mins == secs == 00, third exit, fourth is set if buzzer enabled
-    //fifth for check wheter data or time is being set
-    
+    flags = 0x00;
     
     /*date*/
     time_data_t matrix_date = {{0, 0, 0, 0}, {0, 0, 0}};
@@ -212,7 +211,7 @@ int main(void){
         }
         /*---------------------date update end---------------------------*/
 
-
+        check_alarm(&alarms, &matrix_date, 10, snoze_time_coef);
 
 
         /*-------------------buzzer graphs start--------------------------*/
