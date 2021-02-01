@@ -36,10 +36,10 @@ void check_alarm(alarm_t* alarms, const time_data_t* time, uint8_t quantity, con
                 pt[i].state = 2;
             }
             else if(!pt[i].tim && okK){
-                if(i >= 5){ //5 is a first non repetive alm
+                if(i < 5){ //5 is a first non repetive alm
                     pt[i].flags.days_flags = 0;
+                    pt[i].flags.other_flags = 0;
                 }
-                pt[i].flags.other_flags = 0;
                 pt[i].state = 4;
             }
             break;

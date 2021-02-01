@@ -736,11 +736,11 @@ int main(void){
                         second = alarms[tmp].alm_time.mins / 10; 
                         first = alarms[tmp].alm_time.mins % 10; 
                         break;
-                        default:
-                        fourth = third = second = 27;
-                        first = day_iter;
-                        break;
                     }
+                }
+                if(alm_set_state == 7){
+                    fourth = third = 12; second = 27;
+                    first = day_iter;
                 }
                 tmp = side_iter + (main_iter == 4? 5 : 0);
                 switch(side_state){
@@ -846,8 +846,42 @@ int main(void){
                             if(--alarms[tmp].alm_time.mins > 59) alarms[tmp].alm_time.mins = 59;
                             break;
                             }
+                            side_tim = T2_CONTROLS;
                         }
-                        side_tim = T2_CONTROLS;
+                        break;
+
+                        case 10:
+                        if(S1) { inc_state = 11; side_tim = 60; }
+                        else if(S2) { inc_state = 13; side_tim = 60; }
+
+                        break;
+
+                        case 11:
+                        if(side_tim && !S1){
+                            inc_state = 10;
+                        }
+                        else if(!side_tim && S1){
+                            alarms[tmp].flags.days_flags |= (1 << day_iter++);
+                            inc_state = 12;
+                        }
+                        break;
+                        
+                        case 12:
+                        if(!S1) { inc_state = 10; }
+                        break;
+
+                        case 13:
+                        if(side_tim && !S2){
+                            inc_state = 10;
+                        }
+                        else if(!side_tim && S2){
+                            alm_set_state = 14;
+                            ++day_iter;
+                        }
+                        break;
+                        
+                        case 14:
+                        if(!S2) { inc_state = 10; }
                         break;
                     }
 
@@ -881,7 +915,11 @@ int main(void){
                         case 6:
                         if(S3){
                             if(++alm_h_iter > 1) { 
-                                if(main_iter != 3) alm_set_state = 7;  
+                                if(main_iter != 3) { 
+                                    alm_set_state = 7;  
+                                    inc_state = 10;
+                                    alarms[tmp].flags.days_flags = 0x00;
+                                }
                                 else {
                                     inc_state = 1; alm_set_state = 1;
                                     alarms[tmp].flags.other_flags = 0x01;
@@ -890,7 +928,15 @@ int main(void){
                                 }
                             }
                             else { alm_set_state = 4; }
-                            alm_tim = 60;
+                            alm_tim = 60; day_iter = 1;
+                        }
+                        break;
+
+                        case 7:
+                        if(day_iter > 7){
+                            inc_state = 1; alm_set_state = 1;
+                            alarms[tmp].flags.other_flags = 0x01;
+                            alm_iter = 1;
                         }
                         break;
                     }
